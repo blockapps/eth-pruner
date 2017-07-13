@@ -39,7 +39,7 @@ library
                        , directory
                        , filepath
                        , leveldb-haskell
-                       -- , merkle-patricia-db
+                       , merkle-patricia-db
                        , monad-logger
                        , monad-loops
                        , mtl

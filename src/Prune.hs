@@ -27,7 +27,6 @@ prune originDir toDir = do
   dbTo <- DB.open toDir def{DB.createIfMissing=True}
   backupBlocksTransactionsMiscData dbOrigin dbTo
 
-
 backupBlocksTransactionsMiscData :: DB.DB
                                  -> DB.DB
                                  -> ResourceT IO ()
@@ -62,7 +61,7 @@ backupBlocksTransactionsMiscData dbOrigin dbTo = do
             -- transactionMetadata: hash(32) + txMetaSuffix(1)
             _ -> do
               let hash = BC.take 32 key
-              mTx <- getvalByKey dbOrigin hash
+              mTx <- getValByKey dbOrigin hash
               case mTx of
                 Just tx -> do
                   insertToLvlDB dbTo key val
@@ -70,13 +69,23 @@ backupBlocksTransactionsMiscData dbOrigin dbTo = do
                 Nothing -> return ()
           _ -> return ()
 
+copyMPTFromStateRoot :: DB.DB -> DB.DB -> B.Bytestring -> ResourceT IO ()
+copyMPTFromStateRoot originDB toDB sr = do
+  mVal <- getValByKey originDB sr
+  case mVal of
+    Nothing -> return ()
+    Just val -> do
+      case rlpDecode $ rlpDeserialize value::NodeData of
+        EmptyNodeData -> return ()
+        ShortcutNodeData ->
+
+
+
 insertToLvlDB :: DB.DB -> B.ByteString -> B.ByteString -> ResourceT IO ()
 insertToLvlDB db k v = DB.put db DB.defaultWriteOptions k v
 
-getvalByKey :: DB.DB -> B.ByteString -> ResourceT IO (Maybe B.ByteString)
-getvalByKey db k  = DB.get db DB.defaultReadOptions k
-
-
+getValByKey :: DB.DB -> B.ByteString -> ResourceT IO (Maybe B.ByteString)
+sdjfldsajl;klj;fd
 ldbForEach :: DB.DB -> (B.ByteString -> B.ByteString -> ResourceT IO ()) -> ResourceT IO ()
 ldbForEach db f = do
     i <- DB.iterOpen db def

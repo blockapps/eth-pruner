@@ -13,6 +13,14 @@ packages:
     git: https://github.com/iostat/statsdi
     commit: 6e009c8b625a8c5253da5d9fd025c2467e387d13
   extra-dep: true
+- location:
+    git: https://github.com/blockapps/monstrato
+    commit: cace969cf99f0624696644479c03ded5662ead04
+  extra-dep: true
+  subdirs:
+  - blockapps-util
+  - merkle-patricia-db
+  - strato-model
 extra-deps:
 - Crypto-4.2.5.1
 - SHA2-0.2.5
