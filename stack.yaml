@@ -1,0 +1,50 @@
+flags: {}
+packages:
+- '.'
+- location:
+    git: https://github.com/blockapps/blockapps-haskoin
+    commit: 061a2afebae6dc2024e3fd883b250453f4111c7d
+  extra-dep: true
+- location:
+    git: https://github.com/blockapps/ethereum-rlp
+    commit: 6627727a26ee74381d057eccbe458b419ea24c92 # tag '1'
+  extra-dep: true
+- location:
+    git: https://github.com/iostat/statsdi
+    commit: 6e009c8b625a8c5253da5d9fd025c2467e387d13
+  extra-dep: true
+extra-deps:
+- Crypto-4.2.5.1
+- SHA2-0.2.5
+- leveldb-haskell-0.6.3
+- AES-0.2.9
+- json-rpc-0.2.1.6
+- nibblestring-0.0.3
+- pbkdf-1.1.1.1
+- yesod-raml-0.1.4
+- normaldistribution-1.1.0.3
+- global-lock-0.1
+- base-prelude-1.0.1.1
+- contravariant-extras-0.3.3.1
+- fail-4.9.0.0
+- tuple-th-0.2.5
+- bytestring-arbitrary-0.1.1
+- json-rpc-server-0.2.5.0
+- json-rpc-client-0.2.5.0
+- monadIO-0.10.1.4
+- monad-logger-0.3.20.1
+- esqueleto-2.5.1
+- tasty-hunit-adapter-1.1
+- dequeue-0.1.12
+
+resolver: lts-7.18
+compiler: ghc-8.0.2
+compiler-check: newer-minor
+extra-include-dirs:
+- /usr/local/include
+
+extra-lib-dirs:
+- /usr/local/lib
+
+ghc-options:
+  prune:      -Wall -Werror -fno-warn-warnings-deprecations
