@@ -43,6 +43,7 @@ library
                        , merkle-patricia-db
                        , monad-logger
                        , monad-loops
+                       , ethereum-rlp
                        , mtl
                        , network
                        , process
@@ -66,7 +67,8 @@ executable prune
                        , directory
                        , filepath
                        , leveldb-haskell
-                       -- , merkle-patricia-db
+                       , merkle-patricia-db
+                       , ethereum-rlp
                        , monad-logger
                        , monad-loops
                        , mtl

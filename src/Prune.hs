@@ -28,7 +28,7 @@ instance Pretty B.ByteString where
   pretty = blue . text . BC.unpack . B16.encode
 
 
-prune :: String -> String -> B.ByteString -> ResourceT IO ()
+prune :: String -> String -> StateRoot -> ResourceT IO ()
 prune originDir toDir sr  = do
   inDB <- DB.open originDir def
   outDB <- DB.open toDir def{DB.createIfMissing=True}
@@ -78,8 +78,8 @@ backupBlocksTransactionsMiscData inDB outDB = do
                 Nothing -> return ()
           _ -> return ()
 
-copyMPTFromStateRoot :: DB.DB -> DB.DB -> B.ByteString -> ResourceT IO ()
-copyMPTFromStateRoot inDB outDB stateroot = recCopyMPTF (StateRoot stateroot)
+copyMPTFromStateRoot :: DB.DB -> DB.DB -> StateRoot -> ResourceT IO ()
+copyMPTFromStateRoot inDB outDB stateroot = recCopyMPTF stateroot
   where
     recCopyMPTF (StateRoot sr) = do
       let key = sr
@@ -89,12 +89,11 @@ copyMPTFromStateRoot inDB outDB stateroot = recCopyMPTF (StateRoot stateroot)
         Just val -> do
           insertToLvlDB outDB key val
           case rlpDecode $ rlpDeserialize val::NodeData of
-            ShortcutNodeData { nextVal= Left (PtrRef sr) } -> recCopyMPTF sr
+            ShortcutNodeData { nextVal= Left (PtrRef sr') } -> recCopyMPTF sr'
             FullNodeData {choices=nodeRefs} -> do
-              _ <- fmap (\nr -> case nr of
-                         PtrRef sr -> do
-                                        recCopyMPTF sr
-                         _         -> return () )
+              _ <- mapM (\nr -> case nr of
+                         PtrRef sr' -> recCopyMPTF sr'
+                         _          -> return () )
                        nodeRefs
               return ()
             _                                              -> return ()
