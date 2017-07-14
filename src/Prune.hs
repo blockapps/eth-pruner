@@ -2,36 +2,45 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 module Prune where
 -- import           Blockchain.Format
 
-import           Text.PrettyPrint.ANSI.Leijen hiding ((<$>), (</>))
+import           Text.PrettyPrint.ANSI.Leijen                 hiding ((<$>),
+                                                               (</>))
 
 import           Control.Monad.Loops
 import           Control.Monad.Trans.Resource
-import qualified Data.ByteString              as B
-import qualified Data.ByteString.Base16       as B16
-import qualified Data.ByteString.Char8        as BC
+import qualified Data.ByteString                              as B
+import qualified Data.ByteString.Base16                       as B16
+import qualified Data.ByteString.Char8                        as BC
 import           Data.Default
 import           Data.Monoid
-import qualified Database.LevelDB             as DB
+import qualified Database.LevelDB                             as DB
+
+import           Blockchain.Data.RLP
+import           Blockchain.Database.MerklePatricia.NodeData  (NodeData (..),
+                                                               NodeRef (..))
+import           Blockchain.Database.MerklePatricia.StateRoot (StateRoot (..))
 
 instance Pretty B.ByteString where
   pretty = blue . text . BC.unpack . B16.encode
 
 
-prune :: String -> String -> ResourceT IO ()
-prune originDir toDir = do
-  dbOrigin <- DB.open originDir def
-  dbTo <- DB.open toDir def{DB.createIfMissing=True}
-  backupBlocksTransactionsMiscData dbOrigin dbTo
+prune :: String -> String -> B.ByteString -> ResourceT IO ()
+prune originDir toDir sr  = do
+  inDB <- DB.open originDir def
+  outDB <- DB.open toDir def{DB.createIfMissing=True}
+  backupBlocksTransactionsMiscData inDB outDB
+  copyMPTFromStateRoot inDB outDB sr
+
 
 backupBlocksTransactionsMiscData :: DB.DB
                                  -> DB.DB
                                  -> ResourceT IO ()
-backupBlocksTransactionsMiscData dbOrigin dbTo = do
-  ldbForEach dbOrigin $ \key val ->
+backupBlocksTransactionsMiscData inDB outDB = do
+  ldbForEach inDB $ \key val ->
     case getFirst . foldMap (\v -> First $ BC.stripPrefix v key) $ [ "LastHeader"
                                                                    , "LastBlock"
                                                                    , "LastFast"
@@ -40,44 +49,55 @@ backupBlocksTransactionsMiscData dbOrigin dbTo = do
                                                                    , "mipmap-log-bloom-"
                                                                    , "receipts-"
                                                                    ] of
-      Just _ -> insertToLvlDB dbTo key val
+      Just _ -> insertToLvlDB outDB key val
       Nothing ->
         case BC.length key of
           -- blockHeader: headerPrefix(1) + num (uint64 big endian)(8) + hash(32)
           -- blockBody: bodyPrefix(1) + num (uint64 big endian)(8) + hash(32)
           -- blockReciept: blockRecieptPrefix(1) + num (uint64 big endian)(8) + hash(32)
-          41 -> insertToLvlDB dbTo key val
+          41 -> insertToLvlDB outDB key val
 
           -- totalDifficulty: headerPrefix(1) + num (uint64 big endian)(8) + hash(32) + tdSuffix(1)
-          42 -> insertToLvlDB dbTo key val
+          42 -> insertToLvlDB outDB key val
 
           -- blockHash: headerPrefix(1) + num (uint64 big endian)(8) + numSuffix(1)
-          10  -> insertToLvlDB dbTo key val
+          10  -> insertToLvlDB outDB key val
 
           33 -> case BC.length val of
             -- blockNumber: blockHashPrefix(1) + hash(32)
-            8 -> insertToLvlDB dbTo key val
+            8 -> insertToLvlDB outDB key val
 
             -- transactionMetadata: hash(32) + txMetaSuffix(1)
             _ -> do
               let hash = BC.take 32 key
-              mTx <- getValByKey dbOrigin hash
+              mTx <- getValByKey inDB hash
               case mTx of
                 Just tx -> do
-                  insertToLvlDB dbTo key val
-                  insertToLvlDB dbTo hash tx
+                  insertToLvlDB outDB key val
+                  insertToLvlDB outDB hash tx
                 Nothing -> return ()
           _ -> return ()
 
-copyMPTFromStateRoot :: DB.DB -> DB.DB -> B.Bytestring -> ResourceT IO ()
-copyMPTFromStateRoot originDB toDB sr = do
-  mVal <- getValByKey originDB sr
-  case mVal of
-    Nothing -> return ()
-    Just val -> do
-      case rlpDecode $ rlpDeserialize value::NodeData of
-        EmptyNodeData -> return ()
-        ShortcutNodeData ->
+copyMPTFromStateRoot :: DB.DB -> DB.DB -> B.ByteString -> ResourceT IO ()
+copyMPTFromStateRoot inDB outDB stateroot = recCopyMPTF (StateRoot stateroot)
+  where
+    recCopyMPTF (StateRoot sr) = do
+      let key = sr
+      mVal <- getValByKey inDB sr
+      case mVal of
+        Nothing -> return ()
+        Just val -> do
+          insertToLvlDB outDB key val
+          case rlpDecode $ rlpDeserialize val::NodeData of
+            ShortcutNodeData { nextVal= Left (PtrRef sr) } -> recCopyMPTF sr
+            FullNodeData {choices=nodeRefs} -> do
+              _ <- fmap (\nr -> case nr of
+                         PtrRef sr -> do
+                                        recCopyMPTF sr
+                         _         -> return () )
+                       nodeRefs
+              return ()
+            _                                              -> return ()
 
 
 
@@ -85,7 +105,7 @@ insertToLvlDB :: DB.DB -> B.ByteString -> B.ByteString -> ResourceT IO ()
 insertToLvlDB db k v = DB.put db DB.defaultWriteOptions k v
 
 getValByKey :: DB.DB -> B.ByteString -> ResourceT IO (Maybe B.ByteString)
-sdjfldsajl;klj;fd
+getValByKey db k  = DB.get db DB.defaultReadOptions k
 ldbForEach :: DB.DB -> (B.ByteString -> B.ByteString -> ResourceT IO ()) -> ResourceT IO ()
 ldbForEach db f = do
     i <- DB.iterOpen db def

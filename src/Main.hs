@@ -4,6 +4,6 @@ import           Prune
 
 
 main :: IO ()
-main = let fromDir = "./chaindata"
-           toDir = "./chaindata_new"
-       in runResourceT $ prune fromDir toDir
+main = let inDBDir = "./chaindata"
+           outDBDir = "./chaindata_new"
+       in runResourceT $ prune inDBDir outDBDir

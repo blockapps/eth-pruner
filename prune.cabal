@@ -37,6 +37,7 @@ library
                        , containers
                        , data-default
                        , directory
+                       , ethereum-rlp
                        , filepath
                        , leveldb-haskell
                        , merkle-patricia-db
