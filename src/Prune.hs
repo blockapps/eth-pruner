@@ -8,14 +8,16 @@ module Prune where
 -- import           Blockchain.Format
 
 import           Text.PrettyPrint.ANSI.Leijen                 hiding ((<$>),
-                                                               (</>))
+                                                               (</>), (<>))
 
+import           Control.Monad.IO.Class                       (liftIO)
 import           Control.Monad.Loops
 import           Control.Monad.Trans.Resource
 import qualified Data.ByteString                              as B
 import qualified Data.ByteString.Base16                       as B16
 import qualified Data.ByteString.Char8                        as BC
 import           Data.Default
+-- import           Data.Monoid                                  ((<>))
 import           Data.Monoid
 import qualified Database.LevelDB                             as DB
 
@@ -55,7 +57,8 @@ backupBlocksTransactionsMiscData inDB outDB = do
           -- blockHeader: headerPrefix(1) + num (uint64 big endian)(8) + hash(32)
           -- blockBody: bodyPrefix(1) + num (uint64 big endian)(8) + hash(32)
           -- blockReciept: blockRecieptPrefix(1) + num (uint64 big endian)(8) + hash(32)
-          41 -> insertToLvlDB outDB key val
+          41 -> do
+            insertToLvlDB outDB key val
 
           -- totalDifficulty: headerPrefix(1) + num (uint64 big endian)(8) + hash(32) + tdSuffix(1)
           42 -> insertToLvlDB outDB key val
@@ -75,7 +78,6 @@ backupBlocksTransactionsMiscData inDB outDB = do
                 Just tx -> do
                   insertToLvlDB outDB key val
                   insertToLvlDB outDB hash tx
-                Nothing -> return ()
           _ -> return ()
 
 copyMPTFromStateRoot :: DB.DB -> DB.DB -> StateRoot -> ResourceT IO ()
@@ -98,13 +100,12 @@ copyMPTFromStateRoot inDB outDB stateroot = recCopyMPTF stateroot
               return ()
             _                                              -> return ()
 
-
-
 insertToLvlDB :: DB.DB -> B.ByteString -> B.ByteString -> ResourceT IO ()
 insertToLvlDB db k v = DB.put db DB.defaultWriteOptions k v
 
 getValByKey :: DB.DB -> B.ByteString -> ResourceT IO (Maybe B.ByteString)
 getValByKey db k  = DB.get db DB.defaultReadOptions k
+
 ldbForEach :: DB.DB -> (B.ByteString -> B.ByteString -> ResourceT IO ()) -> ResourceT IO ()
 ldbForEach db f = do
     i <- DB.iterOpen db def
@@ -114,5 +115,5 @@ ldbForEach db f = do
       Just val <- DB.iterValue i
       f key val
       DB.iterNext i
-      return ()
 
+      return ()

@@ -84,3 +84,35 @@ executable prune
     main-is:             Main.hs
     hs-source-dirs:      src
 
+executable count
+    default-language:    Haskell98
+    build-depends: 
+                         base >= 4 && < 5
+                       , ansi-wl-pprint
+                       , array
+                       , base16-bytestring
+                       , binary
+                       , bytestring
+                       , cmdargs
+                       , containers
+                       , data-default
+                       , directory
+                       , filepath
+                       , leveldb-haskell
+                       , merkle-patricia-db
+                       , ethereum-rlp
+                       , monad-logger
+                       , monad-loops
+                       , mtl
+                       , network
+                       , process
+                       , prune
+                       , resourcet
+                       , text
+                       , time
+                       , transformers
+    
+    buildable:           True
+    main-is:             Count.hs
+    hs-source-dirs:      src
+
