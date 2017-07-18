@@ -1,5 +1,8 @@
 #!/bin/bash
 
+bootSecretFile="./test/bootnode/boot-secret"
+bootAddressFile="./test/bootnode/boot-address"
+nodeCoinbases=("5414f0e462f6013998550a728371d67eeed0bb6d" "a82fd9c16f782676e46f3c15d16b63deae5e5afd" "06037e1daa9f4c356b84b87dbcbbc23a562f978e")
 genesisBlock="{
     \"config\": {
         \"chainId\": 15,
@@ -10,48 +13,51 @@ genesisBlock="{
     \"difficulty\": \"20000\",
     \"gasLimit\": \"2100000\",
     \"alloc\": {
-        \"7df9a875a174b3bc565e6424a0050ebc1b2d1d82\": { \"balance\": \"300000\" },
-        \"f41c74c9ae680c1aa78f42e5647a62f353b7bdde\": { \"balance\": \"400000\" }
+        \"${nodeCoinbases[0]}\": { \"balance\": \"300000000000000000000000\" },
+        \"${nodeCoinbases[1]}\": { \"balance\": \"300000000000000000000000\" },
+        \"${nodeCoinbases[2]}\": { \"balance\": \"300000000000000000000000\" }
     }
 }
 "
 
-bootSecretFile="boot-secret"
-bootAddressFile="boot-address"
-
-function createAccountOnNode {
-    echo "creating account for node $1"
-    echo "Unimplemented"
-    exit
-}
 
 function initGethNodes {
-    echo "using genesis file:" 
+    echo "Using genesis file:" 
     echo "$1"
     echo "$1" > genesis.json
 
     # initialize 3 db paths
     for i in {0..2}
     do
-        geth init --datadir "./datadirs/data_$i" genesis.json
-        createAccountOnNode "$i"
+        mkdir -p "./datadirs/data_$i/logs"
+        geth init --datadir "./datadirs/data_$i" genesis.json > "./datadirs/data_$i/logs/init.log"
+        cp -r "./test/keystore" "./datadirs/data_$i"
     done
     rm genesis.json
 }
 
 function startBootNode {
-    echo "starting bootnode. secret key in file: $1"
-    echo "Unimplemented"
-    exit
+    echo "Starting bootnode with secret key file: $1"
+    bootSecretKey=$(<"$1" )
+    bootnode -nodekey "./test/bootnode/boot-secret" -addr ":30299"> "datadirs/bootnode.log" 2>&1 &
 }
 
+function startNode {
+    echo "Starting node $1. Connecting to bootnode at address: $2"
+    geth --datadir "./datadirs/data_$i" --networkid 15 --port "3030$1" --mine --minerthreads=1 --etherbase="${nodeCoinbases[$1]}" --verbosity 11 --bootnodes "enode://$2@127.0.0.1:30299" > "./datadirs/data_$i/logs/geth.log" 2>&1 &
+}
 function startNodes {
-    echo "starting nodes. Connecting to bootnode at address: $1"
-    echo "Unimplemented"
-    exit
+    bootAddress=$(<"$1" )
+    for i in {0..2}
+    do
+        startNode $i "$bootAddress"
+    done
 }
 
-
+function runScriptOnNode {
+    echo "runScriptOnNode: Not Implemeneted"
+    exit
+}
 
 # initialize 3 db paths
 initGethNodes "$genesisBlock"
@@ -62,9 +68,6 @@ startBootNode "$bootSecretFile"
 # get enode key from bootstrap node
 # start 3 nodes with enode pubkey
 startNodes "$bootAddressFile"
-
-#let all nodes mine and gain some ether
-sleep 10
 
 # run a contracts creation script on node 0
 runScriptOnNode 0 "./test/js/createSimpleStorage.js"
