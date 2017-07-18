@@ -1,7 +1,7 @@
 #!/bin/bash
 
 bootSecretFile="./test/bootnode/boot-secret"
-bootAddressFile="./test/bootnode/boot-address"
+bootAddress=$(<"./test/bootnode/boot-address")
 nodeCoinbases=("5414f0e462f6013998550a728371d67eeed0bb6d" "a82fd9c16f782676e46f3c15d16b63deae5e5afd" "06037e1daa9f4c356b84b87dbcbbc23a562f978e")
 genesisBlock="{
     \"config\": {
@@ -19,6 +19,7 @@ genesisBlock="{
     }
 }
 "
+gethPIDs=()
 
 
 function initGethNodes {
@@ -44,10 +45,10 @@ function startBootNode {
 
 function startNode {
     echo "Starting node $1. Connecting to bootnode at address: $2"
-    geth --datadir "./datadirs/data_$i" --networkid 15 --port "3030$1" --mine --minerthreads=1 --etherbase="${nodeCoinbases[$1]}" --verbosity 11 --bootnodes "enode://$2@127.0.0.1:30299" > "./datadirs/data_$i/logs/geth.log" 2>&1 &
+    geth --datadir "./datadirs/data_$i" --networkid 15 --port "3030$1" --mine --minerthreads=1 --etherbase="${nodeCoinbases[$1]}" --verbosity 11 --bootnodes "enode://$2@127.0.0.1:30299" >> "./datadirs/data_$i/logs/geth.log" 2>&1 &
+    gethPIDs[$1]="$!"
 }
 function startNodes {
-    bootAddress=$(<"$1" )
     for i in {0..2}
     do
         startNode $i "$bootAddress"
@@ -55,8 +56,16 @@ function startNodes {
 }
 
 function runScriptOnNode {
-    echo "runScriptOnNode: Not Implemeneted"
-    exit
+    geth attach "./datadirs/data_$1/geth.ipc" --exec "$2"
+}
+
+function stopNode {
+  echo "Stopping node: $1"
+  kill -9 ${gethPIDS[$1]}
+}
+
+function pruneAndBackupNode {
+  echo "pruneAndBackupNode: Not Implemented"
 }
 
 # initialize 3 db paths
@@ -68,6 +77,9 @@ startBootNode "$bootSecretFile"
 # get enode key from bootstrap node
 # start 3 nodes with enode pubkey
 startNodes "$bootAddressFile"
+
+# sleep to let nodes start
+sleep 10
 
 # run a contracts creation script on node 0
 runScriptOnNode 0 "./test/js/createSimpleStorage.js"
@@ -85,7 +97,7 @@ runScriptOnNode 2 "./test/js/callSetOnNode1SimpleStorage.js"
 pruneAndBackupNode 0
 
 # start node A, now using pruned DB
-startNode 0
+startNode 0 $bootAddress
 
 # run a method call script on node A, interacting with 
 runScriptOnNode 0 "./test/js/callGetOnNode1SimpleStorage.js"
