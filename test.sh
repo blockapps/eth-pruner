@@ -2,7 +2,9 @@
 
 bootSecretFile="./test/bootnode/boot-secret"
 bootAddress=$(<"./test/bootnode/boot-address")
-nodeCoinbases=("5414f0e462f6013998550a728371d67eeed0bb6d" "a82fd9c16f782676e46f3c15d16b63deae5e5afd" "06037e1daa9f4c356b84b87dbcbbc23a562f978e")
+nodeCoinbases=( "005519a3f7c402ddc3035cd6e34f22b80a7f01ac" 
+                "dc6d4556dd11b091b267f156715b641dc1825fa0" 
+                "a947162eb55e521825aae1705f162fc40044ab4b")
 genesisBlock="{
     \"config\": {
         \"chainId\": 15,
@@ -45,7 +47,7 @@ function startBootNode {
 
 function startNode {
     echo "Starting node $1. Connecting to bootnode at address: $2"
-    geth --datadir "./datadirs/data_$i" --networkid 15 --port "3030$1" --mine --minerthreads=1 --etherbase="${nodeCoinbases[$1]}" --verbosity 11 --bootnodes "enode://$2@127.0.0.1:30299" >> "./datadirs/data_$i/logs/geth.log" 2>&1 &
+    geth --datadir "./datadirs/data_$i" --unlock "${nodeCoinbases[$1]}" --password "./test/password"  --networkid 15 --port "3030$1" --mine --minerthreads=1 --etherbase="${nodeCoinbases[$1]}" --verbosity 11 --bootnodes "enode://$2@127.0.0.1:30299" >> "./datadirs/data_$i/logs/geth.log" 2>&1 &
     gethPIDs[$1]="$!"
 }
 function startNodes {
