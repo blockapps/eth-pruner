@@ -5,10 +5,6 @@
 {-# LANGUAGE TemplateHaskell   #-}
 
 module Prune where
--- import           Blockchain.Format
-
-import           Text.PrettyPrint.ANSI.Leijen                 hiding ((<$>),
-                                                               (</>), (<>))
 
 import           Control.Monad.IO.Class                       (liftIO)
 import           Control.Monad.Loops
@@ -17,7 +13,7 @@ import qualified Data.ByteString                              as B
 import qualified Data.ByteString.Base16                       as B16
 import qualified Data.ByteString.Char8                        as BC
 import           Data.Default
--- import           Data.Monoid                                  ((<>))
+import           Data.Monoid                                  ((<>))
 import           Data.Monoid
 import qualified Database.LevelDB                             as DB
 
@@ -25,9 +21,6 @@ import           Blockchain.Data.RLP
 import           Blockchain.Database.MerklePatricia.NodeData  (NodeData (..),
                                                                NodeRef (..))
 import           Blockchain.Database.MerklePatricia.StateRoot (StateRoot (..))
-
-instance Pretty B.ByteString where
-  pretty = blue . text . BC.unpack . B16.encode
 
 
 prune :: String -> String -> StateRoot -> ResourceT IO ()
@@ -78,6 +71,8 @@ backupBlocksTransactionsMiscData inDB outDB = do
                 Just tx -> do
                   insertToLvlDB outDB key val
                   insertToLvlDB outDB hash tx
+                Nothing -> liftIO . putStrLn $
+                            "Missing Transaction" <> (BC.unpack . B16.encode $ hash)
           _ -> return ()
 
 copyMPTFromStateRoot :: DB.DB -> DB.DB -> StateRoot -> ResourceT IO ()
@@ -98,7 +93,7 @@ copyMPTFromStateRoot inDB outDB stateroot = recCopyMPTF stateroot
                          _          -> return () )
                        nodeRefs
               return ()
-            _                                              -> return ()
+            _ -> return ()
 
 insertToLvlDB :: DB.DB -> B.ByteString -> B.ByteString -> ResourceT IO ()
 insertToLvlDB db k v = DB.put db DB.defaultWriteOptions k v
@@ -115,5 +110,4 @@ ldbForEach db f = do
       Just val <- DB.iterValue i
       f key val
       DB.iterNext i
-
       return ()
