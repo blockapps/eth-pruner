@@ -1,0 +1,27 @@
+{
+  "name": "eth-pruner-test",
+  "namespace": "eth-pruner",
+  "version": "0.1.0",
+  "description": "npm dependices for eth-pruner test",
+  "dependencies": {
+    "web3":"^0.20.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/blockapps/eth-pruner.git"
+  },
+  "homepage": "https://github.com/blockapps/eth-pruner",
+  "keywords": [
+    "ethereum",
+    "javascript",
+    "test"
+  ],
+  "authors": [
+    {
+      "name": "Charles Crain",
+      "email": "charles@blockapps.net",
+      "url": "https://github.com/charlescrain"
+    }
+  ],
+  "license": "Apache-2"
+}

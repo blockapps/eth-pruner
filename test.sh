@@ -2,9 +2,7 @@
 
 bootSecretFile="./test/bootnode/boot-secret"
 bootAddress=$(<"./test/bootnode/boot-address")
-nodeCoinbases=( "005519a3f7c402ddc3035cd6e34f22b80a7f01ac" 
-                "dc6d4556dd11b091b267f156715b641dc1825fa0" 
-                "a947162eb55e521825aae1705f162fc40044ab4b")
+coinbase="005519a3f7c402ddc3035cd6e34f22b80a7f01ac" 
 genesisBlock="{
     \"config\": {
         \"chainId\": 15,
@@ -15,9 +13,7 @@ genesisBlock="{
     \"difficulty\": \"20000\",
     \"gasLimit\": \"2100000\",
     \"alloc\": {
-        \"${nodeCoinbases[0]}\": { \"balance\": \"300000000000000000000000\" },
-        \"${nodeCoinbases[1]}\": { \"balance\": \"300000000000000000000000\" },
-        \"${nodeCoinbases[2]}\": { \"balance\": \"300000000000000000000000\" }
+        \"$coinbase\": { \"balance\": \"900000000000000000000000\" }
     }
 }
 "
@@ -47,7 +43,11 @@ function startBootNode {
 
 function startNode {
     echo "Starting node $1. Connecting to bootnode at address: $2"
-    geth --datadir "./datadirs/data_$i" --unlock "${nodeCoinbases[$1]}" --password "./test/password"  --networkid 15 --port "3030$1" --mine --minerthreads=1 --etherbase="${nodeCoinbases[$1]}" --verbosity 11 --bootnodes "enode://$2@127.0.0.1:30299" >> "./datadirs/data_$i/logs/geth.log" 2>&1 &
+    port="3030$1"
+    rpcPort="850$1"
+    datadir="./datadirs/data_$1"
+    bootnodeAddr="enode://$2@127.0.0.1:30299"
+    geth --datadir "$datadir" --unlock "$coinbase" --password "./test/password" --rpc --rpcport "$rpcPort" --networkid 15 --port "$port" --mine --minerthreads=1 --etherbase="$coinbase" --verbosity 11 --bootnodes "$bootnodeAddr" >> "$datadir/logs/geth.log" 2>&1 &
     gethPIDs[$1]="$!"
 }
 function startNodes {
@@ -58,16 +58,30 @@ function startNodes {
 }
 
 function runScriptOnNode {
-    geth attach "./datadirs/data_$1/geth.ipc" --exec "$2"
+  scriptPath=$1
+  shift
+  node "$scriptPath" "$@"
 }
 
 function stopNode {
   echo "Stopping node: $1"
-  kill -9 ${gethPIDS[$1]}
+  kill -9 ${gethPIDs[$1]}
 }
 
 function pruneAndBackupNode {
-  echo "pruneAndBackupNode: Not Implemented"
+  dir="./datadirs/data_$1/geth"
+  stateroot=$(<"./test/stateroot$1")
+  cd $dir
+  prune "$stateroot"
+  mv chaindata chaindata_old
+  mv chaindata_new chaindata
+  cd ../../..
+}
+
+function cleanUp {
+  rm -rf ./datadirs
+  rm -rf ./test/contracts
+  killall geth bootnode
 }
 
 # initialize 3 db paths
@@ -75,6 +89,7 @@ initGethNodes "$genesisBlock"
 
 # start bootstrap node
 startBootNode "$bootSecretFile"
+sleep 2
 
 # get enode key from bootstrap node
 # start 3 nodes with enode pubkey
@@ -83,17 +98,22 @@ startNodes "$bootAddressFile"
 # sleep to let nodes start
 sleep 10
 
+mkdir ./test/contracts
+
 # run a contracts creation script on node 0
-runScriptOnNode 0 "./test/js/createSimpleStorage.js"
+runScriptOnNode "./test/js/createSimpleStorage.js" 0
 
 # take node 0 down 
+runScriptOnNode "./test/js/selectStateRootFromBlock.js" 0 "latest"
 stopNode 0
 
 # run a contracts creation script on node 1
-runScriptOnNode 1 "./test/js/createSimpleStorage.js"
+runScriptOnNode "./test/js/createSimpleStorage.js" 1
 
 # run a method call script on node 2
-runScriptOnNode 2 "./test/js/callSetOnNode1SimpleStorage.js"
+addr=$(<"./test/contracts/address1")
+
+runScriptOnNode "./test/js/callSetSimpleStorage.js" 2 $addr 3
 
 # prune and backup Node data
 pruneAndBackupNode 0
@@ -101,6 +121,13 @@ pruneAndBackupNode 0
 # start node A, now using pruned DB
 startNode 0 $bootAddress
 
-# run a method call script on node A, interacting with 
-runScriptOnNode 0 "./test/js/callGetOnNode1SimpleStorage.js"
+#wait for node to resync
+sleep 10
+# run a method call script on node 0, interacting with both old 
+# and new SimpleStorage contracts
+runScriptOnNode "./test/js/callSetSimpleStorage.js" 1 $addr 1
 
+addr=$(<"./test/contracts/address0")
+runScriptOnNode "./test/js/callSetSimpleStorage.js" 0 $addr 2
+
+cleanUp
