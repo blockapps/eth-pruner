@@ -38,16 +38,17 @@ library
                        , data-default
                        , directory
                        , ethereum-rlp
+                       , ethereum-rlp
                        , filepath
                        , leveldb-haskell
                        , merkle-patricia-db
                        , monad-logger
                        , monad-loops
-                       , ethereum-rlp
                        , mtl
                        , network
                        , process
                        , resourcet
+                       , strato-model
                        , text
                        , time
                        , transformers
@@ -76,6 +77,7 @@ executable prune
                        , process
                        , prune
                        , resourcet
+                       , strato-model
                        , text
                        , time
                        , transformers

@@ -21,6 +21,7 @@ packages:
   - blockapps-util
   - merkle-patricia-db
   - strato-model
+  - blockapps-data
 extra-deps:
 - Crypto-4.2.5.1
 - SHA2-0.2.5

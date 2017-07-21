@@ -29,13 +29,14 @@ function initGethNodes {
     for i in {0..2}
     do
         mkdir -p "./datadirs/data_$i/logs"
-        geth init --datadir "./datadirs/data_$i" genesis.json > "./datadirs/data_$i/logs/init.log"
+        geth init --datadir "./datadirs/data_$i" genesis.json > "./datadirs/data_$i/logs/init.log" 2>&1 
         cp -r "./test/keystore" "./datadirs/data_$i"
     done
     rm genesis.json
 }
 
 function startBootNode {
+    echo
     echo "Starting bootnode with secret key file: $1"
     bootSecretKey=$(<"$1" )
     bootnode -nodekey "./test/bootnode/boot-secret" -addr ":30299"> "datadirs/bootnode.log" 2>&1 &
@@ -58,29 +59,36 @@ function startNodes {
 }
 
 function runScriptOnNode {
+  echo
+  echo "running script on node $2"
   scriptPath=$1
   shift
   node "$scriptPath" "$@"
 }
 
 function stopNode {
+  echo
   echo "Stopping node: $1"
-  kill -9 ${gethPIDs[$1]}
+  kill -HUP ${gethPIDs[$1]}
 }
 
 function pruneAndBackupNode {
+  echo
+  echo "Pruning and Backing Up node $1"
+
   dir="./datadirs/data_$1/geth"
-  stateroot=$(<"./test/stateroot$1")
+  blockNum=$(<"./test/selectedBlockNumber_$1")
   cd $dir
-  prune "$stateroot"
+  prune "$blockNum"
   mv chaindata chaindata_old
   mv chaindata_new chaindata
   cd ../../..
 }
 
 function cleanUp {
-  rm -rf ./datadirs
+  # rm -rf ./datadirs
   rm -rf ./test/contracts
+  rm ./test/selectedBlockNumber_*
   killall geth bootnode
 }
 
@@ -96,15 +104,27 @@ sleep 2
 startNodes "$bootAddressFile"
 
 # sleep to let nodes start
-sleep 10
+echo
+echo "Waiting 20s for nodes to start and begin mining blocks"
+sleep 20
 
 mkdir ./test/contracts
 
 # run a contracts creation script on node 0
 runScriptOnNode "./test/js/createSimpleStorage.js" 0
 
+# run a method call script on node 2
+addr=$(<"./test/contracts/address0")
+runScriptOnNode "./test/js/callSetSimpleStorage.js" 2 $addr 10
+
+echo
+echo "Let some blocks build before stopping node 0"
+sleep 20
+
+# save the stateroot of the latest block to a file
+runScriptOnNode "./test/js/selectBlock.js" 0 6
+sleep 2
 # take node 0 down 
-runScriptOnNode "./test/js/selectStateRootFromBlock.js" 0 "latest"
 stopNode 0
 
 # run a contracts creation script on node 1
@@ -122,10 +142,13 @@ pruneAndBackupNode 0
 startNode 0 $bootAddress
 
 #wait for node to resync
-sleep 10
+echo
+echo "Waiting 30s for Node 0 to resync"
+sleep 30 
+
 # run a method call script on node 0, interacting with both old 
 # and new SimpleStorage contracts
-runScriptOnNode "./test/js/callSetSimpleStorage.js" 1 $addr 1
+runScriptOnNode "./test/js/callSetSimpleStorage.js" 0 $addr 1
 
 addr=$(<"./test/contracts/address0")
 runScriptOnNode "./test/js/callSetSimpleStorage.js" 0 $addr 2

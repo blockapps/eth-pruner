@@ -21,7 +21,6 @@ var txData = {
   from: account,
   gas: '500000'
 };
-var addr = fs.readFileSync('./test/contracts/address1','utf8');
 
 var awaitTx = function(contract, hash) {
   return function(res) {
