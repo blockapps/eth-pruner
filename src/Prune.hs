@@ -39,7 +39,7 @@ prune originDir toDir bn  = do
     Just (sr,bh) -> do
       backupBlocksTransactionsMiscData inDB outDB bh
       copyMPTFromStateRoot inDB outDB sr
-    Nothing -> return ()
+    Nothing -> liftIO . putStrLn $ "Issue finding stateroot and hash of block"
   return ()
 
 
@@ -57,7 +57,6 @@ stateRootAndHashFromBlockNumber db bn= do
         Nothing -> return Nothing
         Just sr -> return . Just $ (sr,bh)
   where
-    -- stateRootFromBlockHash = undefined
     stateRootFromBlockHash bh = do
       let key = "h" <> B.pack (leftPad 8 0 [fromIntegral bn]) <> bh
       mblockBodyRLP <- getValByKey db key
@@ -114,14 +113,14 @@ backupBlocksTransactionsMiscData inDB outDB bh = do
                     Nothing -> liftIO . putStrLn $
                                 "Missing Transaction" <> (BC.unpack . B16.encode $ hash)
               _ -> do
-                liftIO . putStrLn $ "Inserting len 33 key not matching patterns: " <> (BC.unpack . B16.encode $ key)
+                -- liftIO . putStrLn $ "Inserting len 33 key not matching patterns: " <> (BC.unpack . B16.encode $ key)
                 insertToLvlDB outDB key val
           _ -> return ()
 
 copyMPTFromStateRoot :: DB.DB -> DB.DB -> StateRoot -> ResourceT IO ()
-copyMPTFromStateRoot inDB outDB stateroot = recCopyMPTF stateroot
+copyMPTFromStateRoot inDB outDB stateroot = recCopyMPT stateroot
   where
-    recCopyMPTF (StateRoot sr) = do
+    recCopyMPT (StateRoot sr) = do
       let key = sr
       mVal <- getValByKey inDB sr
       case mVal of
@@ -129,10 +128,12 @@ copyMPTFromStateRoot inDB outDB stateroot = recCopyMPTF stateroot
         Just val -> do
           insertToLvlDB outDB key val
           case rlpDecode $ rlpDeserialize val::NodeData of
-            ShortcutNodeData { nextVal= Left (PtrRef sr') } -> recCopyMPTF sr'
+            ShortcutNodeData { nextVal= Left (PtrRef sr') } -> recCopyMPT sr'
+            -- ShortcutNodeData { nextVal= Right (RLPString addrData } -> do
+            --   let addressState =
             FullNodeData {choices=nodeRefs} -> do
               _ <- mapM (\nr -> case nr of
-                         PtrRef sr' -> recCopyMPTF sr'
+                         PtrRef sr' -> recCopyMPT sr'
                          _          -> return () )
                        nodeRefs
               return ()
@@ -213,3 +214,29 @@ instance RLPSerializable BlockHeader where
       nonce=bytesToWord64 $ B.unpack $ rlpDecode nonce'
       }
   rlpDecode x = error $ "can not run rlpDecode on BlockHeader for value " ++ show x
+
+data AddressState =
+  AddressState { addressStateNonce        :: Integer
+               , addressStateBalance      :: Integer
+               , addressStateContractRoot :: StateRoot
+               , addressStateCodeHash     :: SHA
+               }
+    deriving (Eq, Read, Show)
+
+instance RLPSerializable AddressState where
+  rlpEncode a | addressStateBalance a < 0 = error $ "Error in cal to rlpEncode for AddressState: AddressState has negative balance: " ++ show a
+  rlpEncode a = RLPArray [
+    rlpEncode $ toInteger $ addressStateNonce a,
+    rlpEncode $ toInteger $ addressStateBalance a,
+    rlpEncode $ addressStateContractRoot a,
+    rlpEncode $ addressStateCodeHash a
+                ]
+
+  rlpDecode (RLPArray [n, b, cr, ch]) =
+    AddressState {
+      addressStateNonce=fromInteger $ rlpDecode n,
+      addressStateBalance=fromInteger $ rlpDecode b,
+      addressStateContractRoot=rlpDecode cr,
+      addressStateCodeHash=rlpDecode ch
+      }
+  rlpDecode x = error $ "Missing case in rlpDecode for AddressState: " ++ show x

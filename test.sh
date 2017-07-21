@@ -123,7 +123,7 @@ sleep 20
 
 # save the stateroot of the latest block to a file
 runScriptOnNode "./test/js/selectBlock.js" 0 6
-sleep 2
+
 # take node 0 down 
 stopNode 0
 
