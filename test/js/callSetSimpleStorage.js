@@ -23,22 +23,21 @@ var txData = {
 };
 
 var awaitTx = function(contract, hash) {
-  return function(res) {
+  return function(err,res) {
     if(!res) {
       setTimeout(function() {
-        web3.eth.getTransactionReceipt(hashString , awaitTx(contract,hash))
-      },2000);
+        web3.eth.getTransactionReceipt(hash, awaitTx(contract,hash))
+      },500);
       return
     }
     console.log('Current value stored after set: ', JSON.parse(contract.get()))
   }
 }
 
+console.log('Calling on contract with address: ',addr)
 var contract = simplestorageContract.at(addr)
 console.log('Current value stored before set: ', JSON.parse(contract.get()))
 contract.set(arg, txData, function(err, res) {
-  setTimeout(function() {
-    console.log('Current value stored after set: ', JSON.parse(contract.get()))
-   }, 10000);
-   console.log('waiting for tx to be mined')
+  awaitTx(contract,res)()
+  console.log('waiting for tx to be mined')
 });

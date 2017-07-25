@@ -1,3 +1,4 @@
+{-# LANGUAGE DoAndIfThenElse   #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 import           Control.Monad.IO.Class       (liftIO)
@@ -11,7 +12,7 @@ import qualified Database.LevelDB             as DB
 
 main :: IO ()
 main = do
-  dbDir <- fmap (flip (!!) 0) getArgs
+  dbDir <- fmap (!! 0) getArgs
   runResourceT $ do
     db <- DB.open dbDir def
     ldbCount db
@@ -27,8 +28,7 @@ ldbCount db = do
     getTotalCount :: Int -> DB.Iterator -> ResourceT IO Int
     getTotalCount c it = do
       valid <- DB.iterValid it
-      case valid of
-        True -> do
+      if valid then do
           _ <- DB.iterNext it
           getTotalCount (c+1) it
-        _ -> return c
+      else return c

@@ -80,16 +80,21 @@ function pruneAndBackupNode {
   blockNum=$(<"./test/selectedBlockNumber_$1")
   cd $dir
   prune "$blockNum"
-  mv chaindata chaindata_old
-  mv chaindata_new chaindata
+  mv chaindata chaindata_backup
+  mv pruned_chaindata chaindata
   cd ../../..
 }
 
 function cleanUp {
-  # rm -rf ./datadirs
+  rm -rf ./datadirs
   rm -rf ./test/contracts
   rm ./test/selectedBlockNumber_*
-  killall geth bootnode
+}
+
+function stopAndShowDbCount {
+  killall geth bootnode > /dev/null 2>&1
+  echo "Number of LevelDB Items in Node $1 :"
+  count ./datadirs/data_$1/geth/chaindata
 }
 
 # initialize 3 db paths
@@ -113,16 +118,20 @@ mkdir ./test/contracts
 # run a contracts creation script on node 0
 runScriptOnNode "./test/js/createSimpleStorage.js" 0
 
-# run a method call script on node 2
+# run a method call script on node 2 20 times to build some old state
 addr=$(<"./test/contracts/address0")
-runScriptOnNode "./test/js/callSetSimpleStorage.js" 2 $addr 10
+
+for i in {1..20}
+do
+    runScriptOnNode "./test/js/callSetSimpleStorage.js" 2 $addr $i 
+done
 
 echo
 echo "Let some blocks build before stopping node 0"
-sleep 20
+sleep 30
 
 # save the stateroot of the latest block to a file
-runScriptOnNode "./test/js/selectBlock.js" 0 6
+runScriptOnNode "./test/js/selectBlock.js" 0 10
 
 # take node 0 down 
 stopNode 0
@@ -152,5 +161,11 @@ runScriptOnNode "./test/js/callSetSimpleStorage.js" 0 $addr 1
 
 addr=$(<"./test/contracts/address0")
 runScriptOnNode "./test/js/callSetSimpleStorage.js" 0 $addr 2
+
+# Stop nodes and show the total items in their DB
+for i in {0..2}
+do
+    stopAndShowDbCount $i
+done
 
 cleanUp

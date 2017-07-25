@@ -8,9 +8,10 @@ import           Prune
 
 main :: IO ()
 main = let inDBDir = "./chaindata"
-           outDBDir = "./chaindata_new"
+           outDBDir = "./pruned_chaindata"
        in do
-            arg <- fmap (flip (!!) 0) getArgs
+            arg <- fmap (!! 0) getArgs
+            print arg
             let blockNumber = read arg :: Int
             runResourceT $ prune inDBDir outDBDir blockNumber
 
