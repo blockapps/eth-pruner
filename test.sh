@@ -69,7 +69,7 @@ function runScriptOnNode {
 function stopNode {
   echo
   echo "Stopping node: $1"
-  kill -HUP ${gethPIDs[$1]}
+  bash -c "kill -HUP ${gethPIDs[$1]}"
 }
 
 function pruneAndBackupNode {
