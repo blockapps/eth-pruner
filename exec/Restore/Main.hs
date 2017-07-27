@@ -1,11 +1,12 @@
 {-# LANGUAGE DoAndIfThenElse   #-}
 {-# LANGUAGE OverloadedStrings #-}
 
--- import           Control.Monad.Trans.Resource (runResourceT)
-import           Data.Monoid        ((<>))
-import           System.Directory   (doesDirectoryExist)
-import           System.Environment (getArgs)
+import           Control.Monad.Trans.Resource (runResourceT)
+import           Data.Monoid                  ((<>))
+import           System.Directory             (doesDirectoryExist)
+import           System.Environment           (getArgs)
 
+import           Restore
 
 main :: IO ()
 main = do
@@ -15,7 +16,7 @@ main = do
       let [inDBDir,outDBDir] = args
       [existsIn, existsOut] <- mapM doesDirectoryExist args
       case (existsIn, existsOut) of
-        (True, True) -> putStrLn "unimplemented!!"
+        (True, True) -> runResourceT $ restore inDBDir outDBDir
         (False, True) -> putStrLn $ "Path to `" <> inDBDir <> "` to levelDB not found. \
                     \ Make sure the chaindata directory is in the current \
                     \ directory"
