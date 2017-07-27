@@ -16,7 +16,7 @@ main = let inDBDir = "./chaindata"
             args <- getArgs
             if length args == 1
               then do
-                arg <- fmap (!! 0) getArgs
+                let arg = head args
                 exists <- doesDirectoryExist inDBDir
                 case maybeRead arg :: Maybe Int of
                   Nothing -> putStrLn $ arg <> " is not a positive integer, please \
