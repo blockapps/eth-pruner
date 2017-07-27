@@ -24,8 +24,10 @@ library
       -fwarn-unused-binds
       -fwarn-unused-imports
     exposed-modules:   
-                         Prune
+                         Database
+                       , Prune
                        , Prune.Types
+                       , Restore
     build-depends: 
                          base 
                        , ansi-wl-pprint

@@ -27,5 +27,5 @@ main = do
   else do
     putStrLn "No arguments found."
     putStrLn ""
-    putStrLn "Usage - restore <path/to/backup> <path/to/pruned"
+    putStrLn "Usage - restore <path/to/backup> <path/to/pruned>"
 
