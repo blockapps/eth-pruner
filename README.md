@@ -20,7 +20,7 @@ The eth-pruner project comes with two executables.
 
 ## Running prune
 
-Run `prune` in the directory containing the levelDB data, typically the levelDB data is stored in a folder called `chaindata`. `prune` takes 1 argument, the selected block number containing the stateroot that should be preserved.
+Run `prune` in the directory containing the levelDB data, typically the levelDB data is stored in a folder called `chaindata`. `prune` takes 1 argument, the selected block number containing the stateroot that should be preserved. Make certain that the geth node is stopped. 
 
 ```
 prune <block-number>
@@ -28,11 +28,15 @@ prune <block-number>
 
 ## Running count
 
-Run `count` in the directory containing the levelDB data, typically the levelDB data is stored in a folder called `chaindata`. `count` takes 0 arguments.
+Run `count` in the directory containing the levelDB data, typically the levelDB data is stored in a folder called `chaindata`. `count` takes 0 arguments. Make certain that the geth node is stopped.
 
 ```
 count
 ```
+
+### Warning
+
+If geth is running when these tools are ran, there is a likely chance that data will be corrupted in the database that will render the geth node useless.
 
 ## Running the tests
 
