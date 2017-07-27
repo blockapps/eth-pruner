@@ -31,7 +31,7 @@ import           Blockchain.Database.MerklePatricia.StateRoot (StateRoot (..))
 leftPad :: Int -> a -> [a] -> [a]
 leftPad n x xs = replicate (max 0 (n - length xs)) x ++ xs
 
-prune :: String -> String -> Int -> ResourceT IO ()
+prune ::  String -> String -> Int -> ResourceT IO ()
 prune originDir toDir bn  = do
   inDB <- DB.open originDir def
   outDB <- DB.open toDir def{DB.createIfMissing=True}
