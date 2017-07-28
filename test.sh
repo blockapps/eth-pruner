@@ -79,14 +79,31 @@ function pruneAndBackupNode {
   dir="./datadirs/data_$1/geth"
   blockNum=$(<"./test/selectedBlockNumber_$1")
   cd $dir
+  countBefore=$(count "./chaindata")
   prune "$blockNum"
   mv chaindata chaindata_backup
   mv pruned_chaindata chaindata
+  countAfter=$(count "./chaindata")
+  echo "Item count before prune: $countBefore."
+  echo "Item count after prune: $countAfter."
+  cd ../../..
+}
+
+function restoreNode {
+  echo
+  echo "Restoring node $1"
+  dir="./datadirs/data_$1/geth"
+  cd $dir
+  countBefore=$(count "./chaindata")
+  restore "./chaindata_backup" "./chaindata"
+  countAfter=$(count "./chaindata")
+  echo "Item count before restore: $countBefore."
+  echo "Item count after restore: $countAfter."
   cd ../../..
 }
 
 function cleanUp {
-  rm -rf ./datadirs
+  # rm -rf ./datadirs
   rm -rf ./test/contracts
   rm ./test/selectedBlockNumber_*
 }
@@ -147,7 +164,7 @@ runScriptOnNode "./test/js/callSetSimpleStorage.js" 2 $addr 3
 # prune and backup Node data
 pruneAndBackupNode 0
 
-# start node A, now using pruned DB
+# start node 0, now using pruned DB
 startNode 0 $bootAddress
 
 #wait for node to resync
@@ -161,6 +178,29 @@ runScriptOnNode "./test/js/callSetSimpleStorage.js" 0 $addr 1
 
 addr=$(<"./test/contracts/address0")
 runScriptOnNode "./test/js/callSetSimpleStorage.js" 0 $addr 2
+
+# take node 0 down 
+stopNode 0
+
+# restore node 0
+restoreNode 0
+ 
+# start node 0, now using pruned DB
+startNode 0 $bootAddress
+
+#wait for node to resync
+echo
+echo "Waiting 30s for Node 0 to resync"
+sleep 30 
+
+# Interact with both contracts to make sure that they are still accessible
+runScriptOnNode "./test/js/callSetSimpleStorage.js" 0 $addr 1
+
+addr=$(<"./test/contracts/address1")
+runScriptOnNode "./test/js/callSetSimpleStorage.js" 0 $addr 2
+
+# # Look up old state of a contract at a certain block
+# runScriptOnNode "./test/js/lookUpOldState.js" 0 $addr 2
 
 # Stop nodes and show the total items in their DB
 for i in {0..2}
