@@ -11,8 +11,6 @@ import           Control.Exception                            hiding (catch)
 import           Control.Monad                                (when)
 import           Control.Monad.Catch
 import           Control.Monad.IO.Class                       (liftIO)
-import           Control.Monad.Loops
-import           Control.Monad.Trans.Resource
 import qualified Data.ByteString                              as B
 import qualified Data.ByteString.Base16                       as B16
 import qualified Data.ByteString.Char8                        as BC
@@ -20,6 +18,7 @@ import           Data.Default
 import           Data.Monoid
 import qualified Database.LevelDB                             as DB
 
+import           Database
 import           Prune.Types
 
 import           Blockchain.Data.RLP
@@ -28,10 +27,13 @@ import           Blockchain.Database.MerklePatricia.NodeData  (NodeData (..),
 import           Blockchain.Database.MerklePatricia.StateRoot (StateRoot (..))
 
 
-leftPad :: Int -> a -> [a] -> [a]
-leftPad n x xs = replicate (max 0 (n - length xs)) x ++ xs
 
-prune ::  String -> String -> Int -> ResourceT IO ()
+
+prune :: (DB.MonadResource m, MonadCatch m)
+      => String
+      -> String
+      -> Int
+      -> m ()
 prune originDir toDir bn  = do
   inDB <- DB.open originDir def
   outDB <- DB.open toDir def{DB.createIfMissing=True}
@@ -51,8 +53,11 @@ prune originDir toDir bn  = do
   return ()
 
 
-stateRootAndHashFromBlockNumber :: DB.DB -> Int -> ResourceT IO (Maybe (StateRoot, B.ByteString))
-stateRootAndHashFromBlockNumber db bn= do
+stateRootAndHashFromBlockNumber :: (DB.MonadResource m, MonadCatch m)
+                                => DB.DB
+                                -> Int
+                                -> m (Maybe (StateRoot, B.ByteString))
+stateRootAndHashFromBlockNumber db bn = do
   let key = "h" <> B.pack (leftPad 8 0 [fromIntegral bn]) <> "n"
   mBlockHash <- getValByKey db key
   case mBlockHash of
@@ -75,10 +80,11 @@ stateRootAndHashFromBlockNumber db bn= do
           in return . Just $ stateRoot blockHeader
 
 
-backupBlocksTransactionsMiscData :: DB.DB
+backupBlocksTransactionsMiscData :: (DB.MonadResource m, MonadCatch m)
+                                 => DB.DB
                                  -> DB.DB
                                  -> B.ByteString
-                                 -> ResourceT IO ()
+                                 -> m ()
 backupBlocksTransactionsMiscData inDB outDB bh = do
   insertToLvlDB outDB "LastHeader" bh
   insertToLvlDB outDB "LastBlock" bh
@@ -121,7 +127,11 @@ backupBlocksTransactionsMiscData inDB outDB bh = do
               _ -> insertToLvlDB outDB key val
           _ -> return ()
 
-copyMPTFromStateRoot :: DB.DB -> DB.DB -> StateRoot -> ResourceT IO ()
+copyMPTFromStateRoot :: (DB.MonadResource m, MonadCatch m)
+                     => DB.DB
+                     -> DB.DB
+                     -> StateRoot
+                     -> m ()
 copyMPTFromStateRoot inDB outDB = recCopyMPT
   where
     recCopyMPT (StateRoot sr) = do
@@ -164,19 +174,5 @@ copyMPTFromStateRoot inDB outDB = recCopyMPT
           recCopyMPT (addressStateContractRoot as)
         Nothing   -> return ()
 
-insertToLvlDB :: DB.DB -> B.ByteString -> B.ByteString -> ResourceT IO ()
-insertToLvlDB db = DB.put db DB.defaultWriteOptions
-
-getValByKey :: DB.DB -> B.ByteString -> ResourceT IO (Maybe B.ByteString)
-getValByKey db = DB.get db DB.defaultReadOptions
-
-ldbForEach :: DB.DB -> (B.ByteString -> B.ByteString -> ResourceT IO ()) -> ResourceT IO ()
-ldbForEach db f = do
-    i <- DB.iterOpen db def
-    DB.iterFirst i
-    whileM_ (DB.iterValid i) $ do
-      Just key <- DB.iterKey i
-      Just val <- DB.iterValue i
-      f key val
-      DB.iterNext i
-      return ()
+leftPad :: Int -> a -> [a] -> [a]
+leftPad n x xs = replicate (max 0 (n - length xs)) x ++ xs
