@@ -8,7 +8,7 @@ if (nodeId === undefined) {
   return;
 }
 
-web3.setProvider(new web3.providers.HttpProvider('http://localhost:850' + nodeId));
+web3.setProvider(new web3.providers.HttpProvider('http://localhost:2200' + nodeId));
 
 var account = web3.eth.accounts[0];
 var simplestorageContract = web3.eth.contract([{"constant":false,"inputs":[{"name":"x","type":"uint256"}],"name":"set","outputs":[],"payable":false,"type":"function"},{"constant":true,"inputs":[],"name":"get","outputs":[{"name":"","type":"uint256"}],"payable":false,"type":"function"}]);
@@ -19,7 +19,7 @@ var txData = {
 };
 var contractCallback = function (e, contract) {
   if (typeof contract.address !== 'undefined') {
-    fs.writeFile('./test/contracts/address' + nodeId, contract.address, function(err) {
+    fs.writeFile('./contracts/address' + nodeId, contract.address, function(err) {
       if(err) {
         return console.log(err);
       }
