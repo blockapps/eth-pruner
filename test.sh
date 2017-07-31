@@ -103,7 +103,7 @@ function restoreNode {
 }
 
 function cleanUp {
-  # rm -rf ./datadirs
+  rm -rf ./datadirs
   rm -rf ./test/contracts
   rm ./test/selectedBlockNumber_*
 }
@@ -114,98 +114,109 @@ function stopAndShowDbCount {
   count ./datadirs/data_$1/geth/chaindata
 }
 
-# initialize 3 db paths
-initGethNodes "$genesisBlock"
+function main {
+  # initialize 3 db paths
+  initGethNodes "$genesisBlock"
 
-# start bootstrap node
-startBootNode "$bootSecretFile"
-sleep 2
+  # start bootstrap node
+  startBootNode "$bootSecretFile"
+  sleep 2
 
-# get enode key from bootstrap node
-# start 3 nodes with enode pubkey
-startNodes "$bootAddressFile"
+  # get enode key from bootstrap node
+  # start 3 nodes with enode pubkey
+  startNodes "$bootAddressFile"
 
-# sleep to let nodes start
-echo
-echo "Waiting 20s for nodes to start and begin mining blocks"
-sleep 20
+  # sleep to let nodes start
+  echo
+  echo "Waiting 20s for nodes to start and begin mining blocks"
+  sleep 20
 
-mkdir ./test/contracts
+  mkdir ./test/contracts
 
-# run a contracts creation script on node 0
-runScriptOnNode "./test/js/createSimpleStorage.js" 0
+  # run a contracts creation script on node 0
+  runScriptOnNode "./test/js/createSimpleStorage.js" 0
 
-# run a method call script on node 2 20 times to build some old state
-addr=$(<"./test/contracts/address0")
+  # run a method call script on node 2 20 times to build some old state
+  addr=$(<"./test/contracts/address0")
+  for i in {1..10}
+  do
+      runScriptOnNode "./test/js/callSetSimpleStorage.js" 2 $addr $i 
+  done
 
-for i in {1..20}
-do
-    runScriptOnNode "./test/js/callSetSimpleStorage.js" 2 $addr $i 
-done
+  echo
+  echo "Let some blocks build before stopping node 0"
+  sleep 10
 
-echo
-echo "Let some blocks build before stopping node 0"
-sleep 30
+  # save the stateroot of the latest block to a file
+  runScriptOnNode "./test/js/selectBlock.js" 0 10
 
-# save the stateroot of the latest block to a file
-runScriptOnNode "./test/js/selectBlock.js" 0 10
+  # take node 0 down 
+  stopNode 0
 
-# take node 0 down 
-stopNode 0
+  # run a contracts creation script on node 1
+  runScriptOnNode "./test/js/createSimpleStorage.js" 1
 
-# run a contracts creation script on node 1
-runScriptOnNode "./test/js/createSimpleStorage.js" 1
+  # run a method call script on node 2
+  addr=$(<"./test/contracts/address1")
 
-# run a method call script on node 2
-addr=$(<"./test/contracts/address1")
+  runScriptOnNode "./test/js/callSetSimpleStorage.js" 2 $addr 3
 
-runScriptOnNode "./test/js/callSetSimpleStorage.js" 2 $addr 3
+  # prune and backup Node data
+  pruneAndBackupNode 0
 
-# prune and backup Node data
-pruneAndBackupNode 0
+  # start node 0, now using pruned DB
+  startNode 0 $bootAddress
 
-# start node 0, now using pruned DB
-startNode 0 $bootAddress
+  # wait for node to resync
+  echo
+  echo "Waiting 30s for Node 0 to resync"
+  sleep 30 
 
-#wait for node to resync
-echo
-echo "Waiting 30s for Node 0 to resync"
-sleep 30 
+  # run a method call script on node 0, interacting with both old 
+  # and new SimpleStorage contracts
+  runScriptOnNode "./test/js/callSetSimpleStorage.js" 0 $addr 1
 
-# run a method call script on node 0, interacting with both old 
-# and new SimpleStorage contracts
-runScriptOnNode "./test/js/callSetSimpleStorage.js" 0 $addr 1
+  addr=$(<"./test/contracts/address0")
+  runScriptOnNode "./test/js/callSetSimpleStorage.js" 0 $addr 2
 
-addr=$(<"./test/contracts/address0")
-runScriptOnNode "./test/js/callSetSimpleStorage.js" 0 $addr 2
+  # Stop nodes and show the total items in their DB
+  for i in {0..2}
+  do
+      stopAndShowDbCount $i
+  done
 
-# take node 0 down 
-stopNode 0
+  # restore node 0
+  restoreNode 0
+   
+  # get enode key from bootstrap node
+  # start 3 nodes with enode pubkey
+  startNodes "$bootAddressFile"
 
-# restore node 0
-restoreNode 0
- 
-# start node 0, now using pruned DB
-startNode 0 $bootAddress
+  # wait for node to resync
+  echo
+  echo "Waiting 30s for Nodes to start"
+  sleep 30 
 
-#wait for node to resync
-echo
-echo "Waiting 30s for Node 0 to resync"
-sleep 30 
+  # Interact with both contracts to make sure that they are still accessible
+  runScriptOnNode "./test/js/callSetSimpleStorage.js" 0 $addr 1
+  
+  addr=$(<"./test/contracts/address1")
+  runScriptOnNode "./test/js/callSetSimpleStorage.js" 0 $addr 2
+  
+  # Look up old state of a contract at a certain block
+  prunedBlock=$(<"./test/selectedBlockNumber_0")
+  blockNum=$(($prunedBlock - 0))
+  addr=$(<"./test/contracts/address0")
+  runScriptOnNode "./test/js/lookUpOldState.js" 0 $addr $blockNum
+  runScriptOnNode "./test/js/lookUpOldState.js" 1 $addr $blockNum
+  
+  # Stop nodes and show the total items in their DB
+  for i in {0..2}
+  do
+      stopAndShowDbCount $i
+  done
 
-# Interact with both contracts to make sure that they are still accessible
-runScriptOnNode "./test/js/callSetSimpleStorage.js" 0 $addr 1
+  cleanUp
+}
 
-addr=$(<"./test/contracts/address1")
-runScriptOnNode "./test/js/callSetSimpleStorage.js" 0 $addr 2
-
-# # Look up old state of a contract at a certain block
-# runScriptOnNode "./test/js/lookUpOldState.js" 0 $addr 2
-
-# Stop nodes and show the total items in their DB
-for i in {0..2}
-do
-    stopAndShowDbCount $i
-done
-
-cleanUp
+main 2>test/error.log
