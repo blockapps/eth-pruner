@@ -18,3 +18,11 @@ cabal.sandbox.config
 .stack-work/
 cabal.project.local
 .HTF/
+test/quorum/contracts/address1
+test/quorum/contracts/address2
+test/quorum/contracts/address3
+test/quorum/contracts/privateAddress1
+test/quorum/contracts/privateAddress2
+test/quorum/contracts/privateAddress5
+*/node_modules/
+.DS_STORE

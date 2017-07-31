@@ -29,4 +29,3 @@ var contractCallback = function (e, contract) {
   }
 }
 simplestorageContract.new(txData, contractCallback)
-
