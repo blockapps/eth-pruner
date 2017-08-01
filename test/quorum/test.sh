@@ -64,23 +64,23 @@ function startBootNode {
 function startNodes {
   echo "[*] Starting node 1"
   PRIVATE_CONFIG=tm1.conf nohup geth --datadir qdata/dd1 $GLOBAL_ARGS --rpcport 22001 --port 21001 --unlock 0 --password passwords.txt 2>>qdata/logs/1.log &
-  gethPIDs[0]="$!"
+  gethPIDs[1]="$!"
 
   echo "[*] Starting node 2"
   PRIVATE_CONFIG=tm2.conf nohup geth --datadir qdata/dd2 $GLOBAL_ARGS --rpcport 22002 --port 21002 --blockmakeraccount "0xca843569e3427144cead5e4d5999a3d0ccf92b8e" --blockmakerpassword "" --singleblockmaker --minblocktime 2 --maxblocktime 5 2>>qdata/logs/2.log &
-  gethPIDs[1]="$!"
+  gethPIDs[2]="$!"
 
   echo "[*] Starting node 3"
   PRIVATE_CONFIG=tm3.conf nohup geth --datadir qdata/dd3 $GLOBAL_ARGS --rpcport 22003 --port 21003 --voteaccount "0x0fbdc686b912d7722dc86510934589e0aaf3b55a" --votepassword "" 2>>qdata/logs/3.log &
-  gethPIDs[2]="$!"
+  gethPIDs[3]="$!"
 
   echo "[*] Starting node 4"
   PRIVATE_CONFIG=tm4.conf nohup geth --datadir qdata/dd4 $GLOBAL_ARGS --rpcport 22004 --port 21004 --voteaccount "0x9186eb3d20cbd1f5f992a950d808c4495153abd5" --votepassword "" 2>>qdata/logs/4.log &
-  gethPIDs[3]="$!"
+  gethPIDs[4]="$!"
 
   echo "[*] Starting node 5"
   PRIVATE_CONFIG=tm5.conf nohup geth --datadir qdata/dd5 $GLOBAL_ARGS --rpcport 22005 --port 21005 --voteaccount "0x0638e1574728b6d862dd5d3a3e0942c3be47d996" --votepassword "" 2>>qdata/logs/5.log &
-  gethPIDs[4]="$!"
+  gethPIDs[5]="$!"
 
   echo "[*] Waiting for nodes to start"
   sleep 10
@@ -88,10 +88,9 @@ function startNodes {
 
 function startNode {
   echo "[*] Starting node $1"
-  ind=$1-1
+  ind=$1
   PRIVATE_CONFIG=tm$1.conf nohup geth --datadir qdata/dd$1 $GLOBAL_ARGS --rpcport 22001 --port 21001 --unlock 0 --password passwords.txt 2>>qdata/logs/$1.log &
   gethPIDs[$ind]="$!"
-  echo "INDEX $ind"
 }
 
 function runScriptOnNode1 {
@@ -107,6 +106,31 @@ function runScriptOnNode {
   scriptPath=$1
   shift
   node "$scriptPath" "$@"
+}
+
+function runPrivateTestOnNode {
+  echo
+  echo "running script on node $2"
+  scriptPath=$1
+  echo "$2" > ./cache/nodeId
+  echo "$3" > ./cache/nodePubKey
+  echo "$4" > ./cache/addr
+  echo "$5" > ./cache/arg
+  echo "$6" > ./cache/privFor1
+  echo "$7" > ./cache/privFor2
+  shift
+  node "$scriptPath"
+}
+
+function runTestOnNode {
+  echo
+  echo "running script on node $2"
+  scriptPath=$1
+  echo "$2" > ./cache/nodeId
+  echo "$3" > ./cache/addr
+  echo "$4" > ./cache/arg
+  shift
+  node "$scriptPath"
 }
 
 function stopNode {
@@ -149,40 +173,76 @@ runScriptOnNode "createPrivateStorage.js" 5 $node5PubKey $node2PubKey $node4PubK
 ## ASSUMING SIMPLESTORAGE CONTRACTS, CHANGE THE STATE ON ALL CONTRACTS 3-4 TIMES USING SET FUNCTION
 
 addr=$(<"./contracts/privateAddress1")
-runScriptOnNode "callSetPrivateStorage.js" 1 $node1PubKey $addr 1 $node2PubKey $node5PubKey
-runScriptOnNode "callSetPrivateStorage.js" 2 $node2PubKey $addr 2 $node1PubKey $node5PubKey
-runScriptOnNode "callSetPrivateStorage.js" 5 $node5PubKey $addr 5 $node1PubKey $node2PubKey
-runScriptOnNode "callSetPrivateStorage.js" 1 $node1PubKey $addr 6 $node2PubKey $node5PubKey
+runPrivateTestOnNode "privateStorageTest.js" 1 $node1PubKey $addr 1 $node2PubKey $node5PubKey
+runPrivateTestOnNode "privateStorageTest.js" 2 $node2PubKey $addr 2 $node1PubKey $node5PubKey
+runPrivateTestOnNode "privateStorageTest.js" 5 $node5PubKey $addr 5 $node1PubKey $node2PubKey
+runPrivateTestOnNode "privateStorageTest.js" 1 $node1PubKey $addr 6 $node2PubKey $node5PubKey
 
 addr=$(<"./contracts/privateAddress2")
-runScriptOnNode "callSetPrivateStorage.js" 2 $node2PubKey $addr 2 $node1PubKey $node5PubKey
-runScriptOnNode "callSetPrivateStorage.js" 1 $node1PubKey $addr 1 $node2PubKey $node5PubKey
-runScriptOnNode "callSetPrivateStorage.js" 5 $node5PubKey $addr 5 $node1PubKey $node2PubKey
-runScriptOnNode "callSetPrivateStorage.js" 2 $node2PubKey $addr 6 $node1PubKey $node5PubKey
+runPrivateTestOnNode "privateStorageTest.js" 2 $node2PubKey $addr 2 $node1PubKey $node5PubKey
+runPrivateTestOnNode "privateStorageTest.js" 1 $node1PubKey $addr 1 $node2PubKey $node5PubKey
+runPrivateTestOnNode "privateStorageTest.js" 5 $node5PubKey $addr 5 $node1PubKey $node2PubKey
+runPrivateTestOnNode "privateStorageTest.js" 2 $node2PubKey $addr 6 $node1PubKey $node5PubKey
 
 addr=$(<"./contracts/privateAddress5")
-runScriptOnNode "callSetPrivateStorage.js" 5 $node5PubKey $addr 5 $node2PubKey $node4PubKey
-runScriptOnNode "callSetPrivateStorage.js" 2 $node2PubKey $addr 2 $node4PubKey $node5PubKey
-runScriptOnNode "callSetPrivateStorage.js" 4 $node4PubKey $addr 4 $node2PubKey $node5PubKey
-runScriptOnNode "callSetPrivateStorage.js" 5 $node5PubKey $addr 6 $node4PubKey $node2PubKey
+runPrivateTestOnNode "privateStorageTest.js" 5 $node5PubKey $addr 5 $node2PubKey $node4PubKey
+runPrivateTestOnNode "privateStorageTest.js" 2 $node2PubKey $addr 2 $node4PubKey $node5PubKey
+runPrivateTestOnNode "privateStorageTest.js" 4 $node4PubKey $addr 4 $node2PubKey $node5PubKey
+runPrivateTestOnNode "privateStorageTest.js" 5 $node5PubKey $addr 6 $node2PubKey $node4PubKey
 
 addr=$(<"./contracts/address1")
-runScriptOnNode "callSetSimpleStorage.js" 1 $addr 1
-runScriptOnNode "callSetSimpleStorage.js" 2 $addr 2
-runScriptOnNode "callSetSimpleStorage.js" 3 $addr 3
-runScriptOnNode "callSetSimpleStorage.js" 4 $addr 4
+runTestOnNode "storageTest.js" 1 $addr 1
+runTestOnNode "storageTest.js" 2 $addr 2
+runTestOnNode "storageTest.js" 3 $addr 3
+runTestOnNode "storageTest.js" 4 $addr 4
 
 addr=$(<"./contracts/address2")
-runScriptOnNode "callSetSimpleStorage.js" 2 $addr 2
-runScriptOnNode "callSetSimpleStorage.js" 3 $addr 3
-runScriptOnNode "callSetSimpleStorage.js" 4 $addr 4
-runScriptOnNode "callSetSimpleStorage.js" 1 $addr 1
+runTestOnNode "storageTest.js" 2 $addr 2
+runTestOnNode "storageTest.js" 3 $addr 3
+runTestOnNode "storageTest.js" 4 $addr 4
+runTestOnNode "storageTest.js" 1 $addr 1
 
 addr=$(<"./contracts/address3")
-runScriptOnNode "callSetSimpleStorage.js" 3 $addr 3
-runScriptOnNode "callSetSimpleStorage.js" 4 $addr 4
-runScriptOnNode "callSetSimpleStorage.js" 1 $addr 1
-runScriptOnNode "callSetSimpleStorage.js" 2 $addr 2
+runTestOnNode "storageTest.js" 3 $addr 3
+runTestOnNode "storageTest.js" 4 $addr 4
+runTestOnNode "storageTest.js" 1 $addr 1
+runTestOnNode "storageTest.js" 2 $addr 2
+
+# addr=$(<"./contracts/privateAddress1")
+# runScriptOnNode "callSetPrivateStorage.js" 1 $node1PubKey $addr 1 $node2PubKey $node5PubKey
+# runScriptOnNode "callSetPrivateStorage.js" 2 $node2PubKey $addr 2 $node1PubKey $node5PubKey
+# runScriptOnNode "callSetPrivateStorage.js" 5 $node5PubKey $addr 5 $node1PubKey $node2PubKey
+# runScriptOnNode "callSetPrivateStorage.js" 1 $node1PubKey $addr 6 $node2PubKey $node5PubKey
+
+# addr=$(<"./contracts/privateAddress2")
+# runScriptOnNode "callSetPrivateStorage.js" 2 $node2PubKey $addr 2 $node1PubKey $node5PubKey
+# runScriptOnNode "callSetPrivateStorage.js" 1 $node1PubKey $addr 1 $node2PubKey $node5PubKey
+# runScriptOnNode "callSetPrivateStorage.js" 5 $node5PubKey $addr 5 $node1PubKey $node2PubKey
+# runScriptOnNode "callSetPrivateStorage.js" 2 $node2PubKey $addr 6 $node1PubKey $node5PubKey
+
+# addr=$(<"./contracts/privateAddress5")
+# runScriptOnNode "callSetPrivateStorage.js" 5 $node5PubKey $addr 5 $node2PubKey $node4PubKey
+# runScriptOnNode "callSetPrivateStorage.js" 2 $node2PubKey $addr 2 $node4PubKey $node5PubKey
+# runScriptOnNode "callSetPrivateStorage.js" 4 $node4PubKey $addr 4 $node2PubKey $node5PubKey
+# runScriptOnNode "callSetPrivateStorage.js" 5 $node5PubKey $addr 6 $node4PubKey $node2PubKey
+
+# addr=$(<"./contracts/address1")
+# runScriptOnNode "callSetSimpleStorage.js" 1 $addr 1
+# runScriptOnNode "callSetSimpleStorage.js" 2 $addr 2
+# runScriptOnNode "callSetSimpleStorage.js" 3 $addr 3
+# runScriptOnNode "callSetSimpleStorage.js" 4 $addr 4
+
+# addr=$(<"./contracts/address2")
+# runScriptOnNode "callSetSimpleStorage.js" 2 $addr 2
+# runScriptOnNode "callSetSimpleStorage.js" 3 $addr 3
+# runScriptOnNode "callSetSimpleStorage.js" 4 $addr 4
+# runScriptOnNode "callSetSimpleStorage.js" 1 $addr 1
+
+# addr=$(<"./contracts/address3")
+# runScriptOnNode "callSetSimpleStorage.js" 3 $addr 3
+# runScriptOnNode "callSetSimpleStorage.js" 4 $addr 4
+# runScriptOnNode "callSetSimpleStorage.js" 1 $addr 1
+# runScriptOnNode "callSetSimpleStorage.js" 2 $addr 2
 
 ## END
 
@@ -193,15 +253,24 @@ stopNode 1
 ### CHANGE THE STATE OF 2 PUBLIC CONTRACTS
 
 addr=$(<"./contracts/address1")
-runScriptOnNode "callSetSimpleStorage.js" 2 $addr 2
+runTestOnNode "storageTest.js" 2 $addr 2
 
 addr=$(<"./contracts/address2")
-runScriptOnNode "callSetSimpleStorage.js" 2 $addr 2
+runTestOnNode "storageTest.js" 2 $addr 2
+
+# addr=$(<"./contracts/address1")
+# runScriptOnNode "callSetSimpleStorage.js" 2 $addr 2
+
+# addr=$(<"./contracts/address2")
+# runScriptOnNode "callSetSimpleStorage.js" 2 $addr 2
 
 ### CHANGE THE STATE OF ONE OF THE PRIVATE CONTRACTS INCLUDED WITH PARTICIPANT NODE
 
 addr=$(<"./contracts/privateAddress1")
-runScriptOnNode "callSetPrivateStorage.js" 2 $node2PubKey $addr 2 $node1PubKey $node5PubKey
+runPrivateTestOnNode "privateStorageTest.js" 2 $node2PubKey $addr 2 $node1PubKey $node5PubKey
+
+# addr=$(<"./contracts/privateAddress1")
+# runScriptOnNode "callSetPrivateStorage.js" 2 $node2PubKey $addr 2 $node1PubKey $node5PubKey
 
 ### BRING PARTICIPANT NODE BACK UP
 
@@ -212,16 +281,33 @@ startNode 1
 ### CHANGE STATE OF ALL CONTRACTS (EXCEPT FOR EXCLUDED PRIVATE CONTRACT) USING PARTICIPANT NODE (NODE 1)
 
 addr=$(<"./contracts/address1")
-runScriptOnNode "callSetSimpleStorage.js" 1 $addr 1
+runTestOnNode "storageTest.js" 1 $addr 1
 
 addr=$(<"./contracts/address2")
-runScriptOnNode "callSetSimpleStorage.js" 1 $addr 1
+runTestOnNode "storageTest.js" 1 $addr 1
 
 addr=$(<"./contracts/address3")
-runScriptOnNode "callSetSimpleStorage.js" 1 $addr 1
+runTestOnNode "storageTest.js" 1 $addr 1
 
 addr=$(<"./contracts/privateAddress1")
-runScriptOnNode "callSetPrivateStorage.js" 1 $node1PubKey $addr 1 $node2PubKey $node5PubKey
+runPrivateTestOnNode "privateStorageTest.js" 1 $node1PubKey $addr 1 $node2PubKey $node5PubKey
 
 addr=$(<"./contracts/privateAddress2")
-runScriptOnNode "callSetPrivateStorage.js" 1 $node1PubKey $addr 1 $node2PubKey $node5PubKey
+runPrivateTestOnNode "privateStorageTest.js" 1 $node1PubKey $addr 1 $node2PubKey $node5PubKey
+
+# addr=$(<"./contracts/address1")
+# runScriptOnNode "callSetSimpleStorage.js" 1 $addr 1
+
+# addr=$(<"./contracts/address2")
+# runScriptOnNode "callSetSimpleStorage.js" 1 $addr 1
+
+# addr=$(<"./contracts/address3")
+# runScriptOnNode "callSetSimpleStorage.js" 1 $addr 1
+
+# addr=$(<"./contracts/privateAddress1")
+# runScriptOnNode "callSetPrivateStorage.js" 1 $node1PubKey $addr 1 $node2PubKey $node5PubKey
+
+# addr=$(<"./contracts/privateAddress2")
+# runScriptOnNode "callSetPrivateStorage.js" 1 $node1PubKey $addr 1 $node2PubKey $node5PubKey
+
+bash stop.sh

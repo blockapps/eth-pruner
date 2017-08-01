@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "description": "npm dependices for eth-pruner test",
   "dependencies": {
-    "web3":"^0.20.1"
+    "mocha": "^3.5.0",
+    "web3": "^0.20.1"
   },
   "repository": {
     "type": "git",
