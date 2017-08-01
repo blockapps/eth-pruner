@@ -2,7 +2,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 import           Control.Monad.Trans.Resource (runResourceT)
-import           Data.Monoid                  ((<>))
+-- import           Data.Semigroup               ((<>))
+import           Options.Applicative
 import           System.Directory             (doesDirectoryExist)
 import           System.Environment           (getArgs)
 
@@ -33,7 +34,27 @@ main = let inDBDir = "./chaindata"
               putStrLn ""
               putStrLn "Usage - prune <block-number>"
 
+mainTmp :: IO ()
+mainTmp = execParser opts >>= (\cli -> runResourceT $ prune (inDBDir cli)
+                                                            (outDBDir cli)
+                                                            (blockNumber cli))
+  where
+    opts = info (cliVals <**> helper)
+      ( fullDesc
+     <> progDesc "Print a greeting for TARGET"
+     <> header "hello - a test for optparse-applicative" )
+
 maybeRead :: Read a => String -> Maybe a
 maybeRead s = case reads s of
     [(x, "")] -> Just x
     _         -> Nothing
+
+
+data CLIVals = CLIVals
+  { inDBDir     :: String
+  , outDBDir    :: String
+  , blockNumber :: Int
+  }
+
+cliVals :: Parser CLIVals
+cliVals = undefined

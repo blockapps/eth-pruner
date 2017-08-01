@@ -78,6 +78,7 @@ executable prune
                        , monad-loops
                        , mtl
                        , network
+                       , optparse-applicative
                        , process
                        , prune
                        , resourcet
