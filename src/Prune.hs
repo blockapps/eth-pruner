@@ -5,6 +5,8 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+
+
 module Prune where
 
 import           Control.Exception                            hiding (catch)
@@ -15,6 +17,7 @@ import qualified Data.ByteString                              as B
 import qualified Data.ByteString.Base16                       as B16
 import qualified Data.ByteString.Char8                        as BC
 import           Data.Default
+import           Data.Maybe                                   (catMaybes)
 import           Data.Monoid
 import qualified Database.LevelDB                             as DB
 
@@ -39,19 +42,24 @@ prune originDir toDir bn  = do
   outDB <- DB.open toDir def{DB.createIfMissing=True}
   let blockNums = if bn < 15 then [0..bn]
                   else            [(bn-15)..bn]
-  listMStateRootsAndBlockHashes <- mapM (stateRootAndHashFromBlockNumber inDB)
-                                        blockNums
-  let mStateRootsAndBlockHashes = sequence listMStateRootsAndBlockHashes
-
+  mStateRootsAndBlockHashes <- sequence <$> mapM (stateRootAndHashFromBlockNumber inDB)
+                                                 blockNums
   case mStateRootsAndBlockHashes of
     Just stateRootsAndBlockHashes -> do
       let (_,targetBH) = last stateRootsAndBlockHashes
-          srs = map fst stateRootsAndBlockHashes
+          stateRoots   = map fst stateRootsAndBlockHashes
+      privSRs <- catMaybes <$> mapM (getPrivateStateRoot inDB) stateRoots
       backupBlocksTransactionsMiscData inDB outDB targetBH
-      mapM_ (copyMPTFromStateRoot inDB outDB) srs
+      mapM_ (copyMPTFromStateRoot inDB outDB) stateRoots
+      mapM_ (copyMPTFromStateRoot inDB outDB) privSRs
     Nothing -> liftIO . putStrLn $ "Issue finding stateroots and hash of blocks"
   return ()
 
+getPrivateStateRoot :: (DB.MonadResource m, MonadCatch m)
+                     => DB.DB
+                     -> StateRoot
+                     -> m (Maybe StateRoot)
+getPrivateStateRoot db (StateRoot sr) = (StateRoot <$>) <$> getValByKey db ("P" <> sr)
 
 stateRootAndHashFromBlockNumber :: (DB.MonadResource m, MonadCatch m)
                                 => DB.DB
@@ -99,22 +107,20 @@ backupBlocksTransactionsMiscData inDB outDB bh = do
       Just _  -> insertToLvlDB outDB key val
       Nothing ->
         case BC.length key of
+          -- totalDifficulty: headerPrefix(1) + num (uint64 big endian)(8) + hash(32) + tdSuffix(1)
+          42 -> insertToLvlDB outDB key val
+
           -- blockHeader: headerPrefix(1) + num (uint64 big endian)(8) + hash(32)
           -- blockBody: bodyPrefix(1) + num (uint64 big endian)(8) + hash(32)
           -- blockReciept: blockRecieptPrefix(1) + num (uint64 big endian)(8) + hash(32)
           41 -> insertToLvlDB outDB key val
 
-           -- totalDifficulty: headerPrefix(1) + num (uint64 big endian)(8) + hash(32) + tdSuffix(1)
-          42 -> insertToLvlDB outDB key val
-
-          -- blockHash: headerPrefix(1) + num (uint64 big endian)(8) + numSuffix(1)
-          10 -> when (key /= "LastHeader") (insertToLvlDB outDB key val)
           33 -> case BC.length val of
-            -- blockNumber: blockHashPrefix(1) + hash(32)
+            -- blockNumber: blockHashPrefix(1) + hash(32) -> blockNumber(8)
             8 -> insertToLvlDB outDB key val
 
-            -- transactionMetadata: hash(32) + txMetaSuffix(1)
             _ -> case BC.unpack . B16.encode $ B.drop 32 key of
+              -- transactionMetadata: hash(32) + txMetaSuffix(1)
               "01" -> do
                   let hash = BC.take 32 key
                   mTx <- getValByKey inDB hash
@@ -124,7 +130,15 @@ backupBlocksTransactionsMiscData inDB outDB bh = do
                       insertToLvlDB outDB hash tx
                     Nothing -> liftIO . putStrLn $
                                 "Missing Transaction" <> (BC.unpack . B16.encode $ hash)
+
+
+              -- privateRoot: privateRootPrefix(1) + hash(32)
               _ -> insertToLvlDB outDB key val
+
+          -- blockHash: headerPrefix(1) + num (uint64 big endian)(8) + numSuffix(1)
+          -- privateBlockBloom: bloomPrefix(2) + num (uint64 big endian)(8)
+          10 -> when (key /= "LastHeader") (insertToLvlDB outDB key val)
+
           _ -> return ()
 
 copyMPTFromStateRoot :: (DB.MonadResource m, MonadCatch m)
@@ -141,8 +155,8 @@ copyMPTFromStateRoot inDB outDB = recCopyMPT
         Nothing -> return ()
         Just val -> do
           insertToLvlDB outDB key val
-          mNodeData <- catch (return . Just $
-                                (rlpDecode $ rlpDeserialize val::NodeData))
+          mNodeData <- catch (Just <$> liftIO (evaluate
+                                (rlpDecode $ rlpDeserialize val::NodeData)))
                              (\ (_ :: IOException) -> return Nothing)
           case mNodeData of
             Just nd -> handleNodeData nd
@@ -151,9 +165,9 @@ copyMPTFromStateRoot inDB outDB = recCopyMPT
     handleNodeData = \case
       ShortcutNodeData { nextVal= Left (PtrRef sr') } -> recCopyMPT sr'
       ShortcutNodeData { nextVal= Right (RLPString rlpData )} -> do
-        mAddrState <- catch (return . Just $
-                              (rlpDecode $ rlpDeserialize rlpData::AddressState))
-                              (\ (_ :: IOException) -> return Nothing)
+        mAddrState <- catch (Just <$> liftIO (evaluate
+                              (rlpDecode $ rlpDeserialize rlpData::AddressState)))
+                              (\ (_ :: SomeException) -> return Nothing)
         case mAddrState of
           Just as -> handleAddressState as
           Nothing -> return ()
