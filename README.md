@@ -1,6 +1,12 @@
 # eth-pruner
 State Trie pruner for Ethereum state trie.
 
+## Dependencies
+
+The tools provided in eth-pruner require a functioning `geth`/`quorum` node to exist to be of any use. 
+
+Those using these tools should be comfortable starting and stopping `geth`/`quorum` nodes.
+
 ## Building the source
 
 Building eth-pruner requires [stack](https://docs.haskellstack.org/en/stable/README/).
@@ -15,7 +21,8 @@ The eth-pruner project comes with two executables.
 
 | Command    | Description |
 |:----------:|-------------|
-| **`prune`** | The main pruner CLI. It will prune the levelDB powering a geth node from a selected block. It leaves the original database as is and constructing the pruned database in the folder `pruned_chaindata`.|
+| **`prune`** | The main pruner CLI. It will prune the levelDB powering a geth node from a selected block. It leaves the original database as is and constructing the pruned database in the folder `pruned_chaindata`. *Note:* You will need to manually move `pruned_chaindata` to `chaindata` to run the node using the pruned database.|
+| `restore` | The restoration tool to restore a pruned levelDB using an un-pruned backup of the geth leveDB.|
 | `count` | A useful tool to output the number of elements in levelDB by iterating through all the elements.|
 
 ## Running prune
@@ -26,22 +33,47 @@ Run `prune` in the directory containing the levelDB data, typically the levelDB 
 prune <block-number>
 ```
 
-## Running count
+## Running restore
 
-Run `count` in the directory containing the levelDB data, typically the levelDB data is stored in a folder called `chaindata`. `count` takes 0 arguments. Make certain that the geth node is stopped.
+`restore` can be ran in any directory. `restore` takes 2 arguments: 
+
+    1. the path to the directory of backup levelDB
+    2. the path to the directory of the pruned levelDB
+ 
+ Make certain that the geth node is stopped. 
 
 ```
-count
+restore <path/to/backup/levelDB> <path/to/pruned/levelDB>
+```
+
+## Running count
+
+`count` can be ran in any directory. `count` takes 1 arguments, the path to the levelDB to count on. Make certain that the geth node is stopped.
+
+```
+count <path/to/levelDB>
 ```
 
 ### Warning
 
-If geth is running when these tools are ran, there is a likely chance that data will be corrupted in the database that will render the geth node useless.
+If geth is running when these tools are ran, there is a likely chance that data will be corrupted in the database, potentially rendering the geth node useless.
 
 ## Running the tests
 
-To run the tests, make sure that `geth` and `bootnode` commands are installed as well as `node`. Simply run the command:
+There are 2 tests, a geth test and a quorum test. For the quorum test to run, it will need the correct binary of `geth` and the `constellation-node` binary. Make sure that `geth` and `bootnode` (and `constellation-node` for quorum) commands are installed as well as `node` version `6.11.1`. 
+
+### Running geth test
 
 ```
+cd test/geth
 ./test.sh
+```
+
+
+### Running quorum test
+
+```
+cd test/quorum
+./test.sh
+./stop.sh
 ```
