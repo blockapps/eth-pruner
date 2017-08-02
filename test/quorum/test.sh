@@ -208,42 +208,6 @@ runTestOnNode "storageTest.js" 4 $addr 4
 runTestOnNode "storageTest.js" 1 $addr 1
 runTestOnNode "storageTest.js" 2 $addr 2
 
-# addr=$(<"./contracts/privateAddress1")
-# runScriptOnNode "callSetPrivateStorage.js" 1 $node1PubKey $addr 1 $node2PubKey $node5PubKey
-# runScriptOnNode "callSetPrivateStorage.js" 2 $node2PubKey $addr 2 $node1PubKey $node5PubKey
-# runScriptOnNode "callSetPrivateStorage.js" 5 $node5PubKey $addr 5 $node1PubKey $node2PubKey
-# runScriptOnNode "callSetPrivateStorage.js" 1 $node1PubKey $addr 6 $node2PubKey $node5PubKey
-
-# addr=$(<"./contracts/privateAddress2")
-# runScriptOnNode "callSetPrivateStorage.js" 2 $node2PubKey $addr 2 $node1PubKey $node5PubKey
-# runScriptOnNode "callSetPrivateStorage.js" 1 $node1PubKey $addr 1 $node2PubKey $node5PubKey
-# runScriptOnNode "callSetPrivateStorage.js" 5 $node5PubKey $addr 5 $node1PubKey $node2PubKey
-# runScriptOnNode "callSetPrivateStorage.js" 2 $node2PubKey $addr 6 $node1PubKey $node5PubKey
-
-# addr=$(<"./contracts/privateAddress5")
-# runScriptOnNode "callSetPrivateStorage.js" 5 $node5PubKey $addr 5 $node2PubKey $node4PubKey
-# runScriptOnNode "callSetPrivateStorage.js" 2 $node2PubKey $addr 2 $node4PubKey $node5PubKey
-# runScriptOnNode "callSetPrivateStorage.js" 4 $node4PubKey $addr 4 $node2PubKey $node5PubKey
-# runScriptOnNode "callSetPrivateStorage.js" 5 $node5PubKey $addr 6 $node4PubKey $node2PubKey
-
-# addr=$(<"./contracts/address1")
-# runScriptOnNode "callSetSimpleStorage.js" 1 $addr 1
-# runScriptOnNode "callSetSimpleStorage.js" 2 $addr 2
-# runScriptOnNode "callSetSimpleStorage.js" 3 $addr 3
-# runScriptOnNode "callSetSimpleStorage.js" 4 $addr 4
-
-# addr=$(<"./contracts/address2")
-# runScriptOnNode "callSetSimpleStorage.js" 2 $addr 2
-# runScriptOnNode "callSetSimpleStorage.js" 3 $addr 3
-# runScriptOnNode "callSetSimpleStorage.js" 4 $addr 4
-# runScriptOnNode "callSetSimpleStorage.js" 1 $addr 1
-
-# addr=$(<"./contracts/address3")
-# runScriptOnNode "callSetSimpleStorage.js" 3 $addr 3
-# runScriptOnNode "callSetSimpleStorage.js" 4 $addr 4
-# runScriptOnNode "callSetSimpleStorage.js" 1 $addr 1
-# runScriptOnNode "callSetSimpleStorage.js" 2 $addr 2
-
 ## END
 
 ### STOP THE PARTICIPANT NODE
@@ -258,19 +222,10 @@ runTestOnNode "storageTest.js" 2 $addr 2
 addr=$(<"./contracts/address2")
 runTestOnNode "storageTest.js" 2 $addr 2
 
-# addr=$(<"./contracts/address1")
-# runScriptOnNode "callSetSimpleStorage.js" 2 $addr 2
-
-# addr=$(<"./contracts/address2")
-# runScriptOnNode "callSetSimpleStorage.js" 2 $addr 2
-
 ### CHANGE THE STATE OF ONE OF THE PRIVATE CONTRACTS INCLUDED WITH PARTICIPANT NODE
 
 addr=$(<"./contracts/privateAddress1")
 runPrivateTestOnNode "privateStorageTest.js" 2 $node2PubKey $addr 2 $node1PubKey $node5PubKey
-
-# addr=$(<"./contracts/privateAddress1")
-# runScriptOnNode "callSetPrivateStorage.js" 2 $node2PubKey $addr 2 $node1PubKey $node5PubKey
 
 ### BRING PARTICIPANT NODE BACK UP
 
@@ -294,20 +249,5 @@ runPrivateTestOnNode "privateStorageTest.js" 1 $node1PubKey $addr 1 $node2PubKey
 
 addr=$(<"./contracts/privateAddress2")
 runPrivateTestOnNode "privateStorageTest.js" 1 $node1PubKey $addr 1 $node2PubKey $node5PubKey
-
-# addr=$(<"./contracts/address1")
-# runScriptOnNode "callSetSimpleStorage.js" 1 $addr 1
-
-# addr=$(<"./contracts/address2")
-# runScriptOnNode "callSetSimpleStorage.js" 1 $addr 1
-
-# addr=$(<"./contracts/address3")
-# runScriptOnNode "callSetSimpleStorage.js" 1 $addr 1
-
-# addr=$(<"./contracts/privateAddress1")
-# runScriptOnNode "callSetPrivateStorage.js" 1 $node1PubKey $addr 1 $node2PubKey $node5PubKey
-
-# addr=$(<"./contracts/privateAddress2")
-# runScriptOnNode "callSetPrivateStorage.js" 1 $node1PubKey $addr 1 $node2PubKey $node5PubKey
 
 bash stop.sh

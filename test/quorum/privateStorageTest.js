@@ -17,7 +17,6 @@ mocha.run()
     })
     .on('fail', function (test, err) {
         console.log('Test fail');
-        console.log(test);
         console.log(err);
         process.exit(1);
     })

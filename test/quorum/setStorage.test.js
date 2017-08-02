@@ -10,8 +10,8 @@ describe("Public Storgage Test", function () {
     let addr = null;
     
     before(function() {
-        nodeId = fs.readFileSync('./cache/nodeId', "utf8");
-        arg = fs.readFileSync('./cache/arg', "utf8");
+        nodeId = fs.readFileSync('./cache/nodeId', "utf8").replace('\n', '').replace(' ', '');
+        arg = fs.readFileSync('./cache/arg', "utf8").replace('\n', '').replace(' ', '');
         addr = fs.readFileSync('./cache/addr', 'utf8').replace('\n', '').replace(' ', '');
         web3.setProvider(new web3.providers.HttpProvider('http://localhost:2200' + nodeId));
         web3.eth.defaultAccount = web3.eth.accounts[0];
@@ -26,27 +26,24 @@ describe("Public Storgage Test", function () {
             gas: '500000'
         };
 
-        var awaitTx = function (contract, hash) {
-            return function (err, res) {
-                if (!res) {
-                    setTimeout(function () {
-                        web3.eth.getTransactionReceipt(hash, awaitTx(contract, hash))
-                    }, 500);
-                    return
-                }
-                const result = contract.get();
-                console.log('Current value stored after set: ', JSON.parse(result))
-                assert.equal(result, arg, "stored value not set as argument");   
-                done();
-            }
-        }
-
         console.log('Calling on contract with address: ', addr)
         var contract = simplestorageContract.at(addr)
         console.log('Current value stored before set: ', JSON.parse(contract.get()))
-        const result = contract.set(arg, txData, function (err, res) {
-            awaitTx(contract, res)()
-            console.log('waiting for tx to be mined')
+        const setPromise = new Promise(function (resolve, reject) {
+            contract.set(arg, txData, function (err, hash) {
+                resolve(hash);
+            });
         });
+        return setPromise
+            .then(function (hash) {
+                return new Promise(function (resolve, reject) {
+                    resolve(web3.eth.getTransactionReceipt(hash))
+                });
+            })
+            .then(function (hash) {
+                const setResult = JSON.parse(contract.get());
+                console.log('Current value stored after set: ', JSON.parse(setResult));
+                assert.equal(setResult, arg, "stored value not set as argument");
+            }).catch(done);
     });
 });
