@@ -2,59 +2,37 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 import           Control.Monad.Trans.Resource (runResourceT)
--- import           Data.Semigroup               ((<>))
 import           Options.Applicative
 import           System.Directory             (doesDirectoryExist)
-import           System.Environment           (getArgs)
 
 import           Prune
 
 
 main :: IO ()
-main = let inDBDir = "./chaindata"
-           outDBDir = "./pruned_chaindata"
-       in do
-            args <- getArgs
-            if length args == 1
-              then do
-                let arg = head args
-                exists <- doesDirectoryExist inDBDir
-                case maybeRead arg :: Maybe Int of
-                  Nothing -> putStrLn $ arg <> " is not a positive integer, please \
-                                            \ select an appropriate value for the \
-                                            \ block number"
-                  Just blockNumber ->
-                    if exists
-                      then runResourceT $ prune inDBDir outDBDir blockNumber
-                      else putStrLn $ "Path `" <> inDBDir <> "` to levelDB not found. \
-                                  \ Make sure the chaindata directory is in the current \
-                                  \ directory"
-            else do
-              putStrLn "No arguments found."
-              putStrLn ""
-              putStrLn "Usage - prune <block-number>"
+main = execParser opts >>= (\cli ->
+  let inDBDir = "./chaindata"
+      outDBDir = "./pruned_chaindata"
+  in do
+    exists <- doesDirectoryExist inDBDir
 
-mainTmp :: IO ()
-mainTmp = execParser opts >>= (\cli -> runResourceT $ prune (inDBDir cli)
-                                                            (outDBDir cli)
-                                                            (blockNumber cli))
+    if exists
+      then runResourceT $ prune inDBDir outDBDir (blockNumber cli)
+      else putStrLn $ "Path `" <> inDBDir <> "` to levelDB not found.\
+                  \ Make sure the chaindata directory is in the current\
+                  \ directory" )
   where
     opts = info (cliVals <**> helper)
       ( fullDesc
-     <> progDesc "Print a greeting for TARGET"
-     <> header "hello - a test for optparse-applicative" )
-
-maybeRead :: Read a => String -> Maybe a
-maybeRead s = case reads s of
-    [(x, "")] -> Just x
-    _         -> Nothing
+     <> progDesc "Prune the State Trie from given BLOCK"
+     <> header "prune - a state trie pruning tool for geth/quorum" )
 
 
-data CLIVals = CLIVals
-  { inDBDir     :: String
-  , outDBDir    :: String
-  , blockNumber :: Int
-  }
 
-cliVals :: Parser CLIVals
-cliVals = undefined
+newtype BlockNum = BlockNum { blockNumber :: Int }
+
+cliVals :: Parser BlockNum
+cliVals = BlockNum
+       <$> argument auto
+                    (metavar "BLOCK"
+                   <> help "block number to prune from")
+

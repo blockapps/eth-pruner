@@ -113,6 +113,7 @@ executable restore
                        , monad-loops
                        , mtl
                        , network
+                       , optparse-applicative
                        , process
                        , prune
                        , resourcet
@@ -146,6 +147,7 @@ executable count
                        , monad-loops
                        , mtl
                        , network
+                       , optparse-applicative
                        , process
                        , prune
                        , resourcet

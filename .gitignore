@@ -27,4 +27,5 @@ test/quorum/contracts/privateAddress5
 */node_modules/
 .DS_STORE
 node_modules/
-test/error.log
+test/geth/error.log
+test/geth/datadirs/
