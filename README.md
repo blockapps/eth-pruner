@@ -74,6 +74,7 @@ cd test/geth
 
 ```
 cd test/quorum
+./init.sh
 ./test.sh
 ./stop.sh
 ```
