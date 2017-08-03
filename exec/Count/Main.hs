@@ -4,31 +4,25 @@
 import           Control.Monad.IO.Class       (liftIO)
 import           Control.Monad.Trans.Resource
 import           Data.Default
-import           Data.Monoid                  ((<>))
+import           Options.Applicative
 import           System.Directory             (doesDirectoryExist)
-import           System.Environment           (getArgs)
 
 import qualified Database.LevelDB             as DB
 
 
-
 main :: IO ()
-main = do
-  args <- getArgs
-  if length args == 1
-    then do
-      let dbDir = head args
-      exists <- doesDirectoryExist dbDir
-      if exists
-        then runResourceT $ do
-          db <- DB.open dbDir def
-          ldbCount db
-        else putStrLn $ "Path `" <> dbDir <> "` to levelDB not found."
-  else do
-    putStrLn "No arguments found."
-    putStrLn ""
-    putStrLn "Usage - count /path/to/levelDB"
-
+main = execParser opts >>= (\cli -> do
+  exists <- doesDirectoryExist (dbDir cli)
+  if exists
+    then runResourceT $ do
+      db <- DB.open (dbDir cli) def
+      ldbCount db
+    else putStrLn $ "Path `" <> dbDir cli <> "` to levelDB not found." )
+  where
+    opts = info (cliVals <**> helper)
+      ( fullDesc
+     <> progDesc "Count the total keys in a levelDB"
+     <> header "count - a tool to count all the items in a levelDB" )
 
 ldbCount :: DB.DB -> ResourceT IO ()
 ldbCount db = do
@@ -45,3 +39,12 @@ ldbCount db = do
           _ <- DB.iterNext it
           getTotalCount (c+1) it
       else return c
+
+
+newtype DBDir = DBDir { dbDir :: String }
+
+cliVals :: Parser DBDir
+cliVals = DBDir
+       <$> argument str
+                    (metavar "DB_PATH"
+                   <> help "directory of the levelDB ")

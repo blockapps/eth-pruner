@@ -25,6 +25,11 @@ var txData = {
   privateFor: [privFor1, privFor2]
 };
 var contractCallback = function (e, contract) {
+  if (e) {
+    console.log(e);
+    return;
+  }
+
   if (typeof contract.address !== 'undefined') {
     fs.writeFile('./contracts/privateAddress' + nodeId, contract.address, function(err) {
       if(err) {

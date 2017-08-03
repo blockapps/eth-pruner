@@ -10,10 +10,10 @@ if (nodeId === undefined || blocksFromLatest === undefined) {
   return;
 }
 
-web3.setProvider(new web3.providers.HttpProvider('http://localhost:850' + nodeId));
+web3.setProvider(new web3.providers.HttpProvider('http://localhost:2200' + nodeId));
 latestBlockNum = web3.eth.getBlock('latest').number
 blockNum = latestBlockNum - blocksFromLatest
-fs.writeFile('./test/selectedBlockNumber_'+nodeId, blockNum, function(err) {
+fs.writeFile('./selectedBlockNumber_'+nodeId, blockNum, function(err) {
   if(err) {
     return console.log(err);
   }

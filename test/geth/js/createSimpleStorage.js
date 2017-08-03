@@ -19,7 +19,7 @@ var txData = {
 };
 var contractCallback = function (e, contract) {
   if (typeof contract.address !== 'undefined') {
-    fs.writeFile('./test/contracts/address' + nodeId, contract.address, function(err) {
+    fs.writeFile('./contracts/address' + nodeId, contract.address, function(err) {
       if(err) {
         return console.log(err);
       }

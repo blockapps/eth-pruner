@@ -119,7 +119,24 @@ function stopNodes {
   killall geth bootnode constellation-node
 }
 
-# initGethNodes
+function pruneAndBackupNode {
+  echo
+  echo "Pruning and Backing Up node $1"
+
+  dir="./qdata/dd$1/geth"
+  blockNum=$(<"./selectedBlockNumber_$1")
+  cd $dir
+  countBefore=$(count "./chaindata")
+  prune "$blockNum"
+  mv chaindata chaindata_backup
+  mv pruned_chaindata chaindata
+  countAfter=$(count "./chaindata")
+  echo "Item count before prune: $countBefore."
+  echo "Item count after prune: $countAfter."
+  cd ../../..
+}
+
+initGethNodes
 
 node1PubKey=$(<"./keys/tm1.pub")
 node2PubKey=$(<"./keys/tm2.pub")
@@ -186,9 +203,13 @@ runScriptOnNode "callSetSimpleStorage.js" 2 $addr 2
 
 ## END
 
+# save the stateroot of the latest block to a file
+runScriptOnNode "./selectBlock.js" 1 10
+
 ### STOP THE PARTICIPANT NODE
 
 stopNode 1
+pruneAndBackupNode 1
 
 ### CHANGE THE STATE OF 2 PUBLIC CONTRACTS
 
