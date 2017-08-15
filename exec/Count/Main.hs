@@ -4,10 +4,10 @@
 import           Control.Monad.IO.Class       (liftIO)
 import           Control.Monad.Trans.Resource
 import           Data.Default
+import qualified Database.LevelDB             as DB
+import qualified Database.LevelDB.Streaming   as DB
 import           Options.Applicative
 import           System.Directory             (doesDirectoryExist)
-
-import qualified Database.LevelDB             as DB
 
 
 main :: IO ()
@@ -25,20 +25,14 @@ main = execParser opts >>= (\cli -> do
      <> header "count - a tool to count all the items in a levelDB" )
 
 ldbCount :: DB.DB -> ResourceT IO ()
-ldbCount db = do
-  i <- DB.iterOpen db def
-  DB.iterFirst i
-  let count = 0 :: Int
-  totalCount <- getTotalCount count i
-  liftIO . putStrLn $ show totalCount
-  where
-    getTotalCount :: Int -> DB.Iterator -> ResourceT IO Int
-    getTotalCount c it = do
-      valid <- DB.iterValid it
-      if valid then do
-          _ <- DB.iterNext it
-          getTotalCount (c+1) it
-      else return c
+ldbCount db =
+  DB.withIterator db
+                  def
+                  (\ i -> do
+                      let stream = DB.keySlice i DB.AllKeys DB.Desc :: DB.Stream (ResourceT IO) DB.Key
+                      totalCount <- DB.foldl' (\c _ -> c + 1) (0::Int) stream
+                      liftIO . putStrLn $ show totalCount
+                  )
 
 
 newtype DBDir = DBDir { dbDir :: String }
