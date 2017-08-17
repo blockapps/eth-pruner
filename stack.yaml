@@ -25,7 +25,7 @@ packages:
 extra-deps:
 - Crypto-4.2.5.1
 - SHA2-0.2.5
-- leveldb-haskell-0.6.3
+- leveldb-haskell-0.6.5
 - AES-0.2.9
 - json-rpc-0.2.1.6
 - nibblestring-0.0.3

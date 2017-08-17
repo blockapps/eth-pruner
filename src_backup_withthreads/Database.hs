@@ -1,5 +1,7 @@
 module Database where
 
+-- import           Control.Concurrent
+-- import           Control.Monad
 import           Control.Monad.Loops
 import qualified Data.ByteString     as B
 import qualified Database.LevelDB    as DB
@@ -9,7 +11,7 @@ insertToLvlDB :: DB.DB
               -> B.ByteString
               -> B.ByteString
               -> IO ()
-insertToLvlDB db = DB.put db DB.defaultWriteOptions
+insertToLvlDB db  = DB.put db DB.defaultWriteOptions
 
 batchWriteToLvlDB :: DB.DB
                   -> DB.WriteBatch
