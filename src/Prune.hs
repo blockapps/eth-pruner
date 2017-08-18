@@ -44,10 +44,16 @@ prune :: (DB.MonadResource m, MonadCatch m)
 prune originDir toDir bn  = do
   inDB <- DB.open originDir def
   outDB <- DB.open toDir def{DB.createIfMissing=True, DB.writeBufferSize=104857600}
-  writeBucket <- liftIO $ newMVar ([] :: DB.WriteBatch)
+  writeBucket <- liftIO $ newMVar ([] :: DB.WriteBatch, 0)
+  insertHandlerDone <- liftIO $ newMVar False
+  done <- liftIO $ newMVar False
 
   -- Accumulate writes to LevelDB and bulk insert in a separate thread.
-  threadId <- liftIO . forkIO $ insertLoop outDB writeBucket
+  threadId <- liftIO . forkIO $ insertLoop
+                                  insertHandlerDone
+                                  done
+                                  outDB
+                                  writeBucket
 
   -- Pruning
   let blockNums = if bn < 15 then [0..bn]
@@ -67,6 +73,8 @@ prune originDir toDir bn  = do
         putStrLn ("Copying from " <> show (countSR * 2)  <> "state roots")
         mapM_ (copyMPTFromStateRoot inDB writeBucket) stateRoots
         mapM_ (copyMPTFromStateRoot inDB writeBucket) privSRs
+        _ <- liftIO $ swapMVar done True
+        _ <- liftIO $ takeMVar insertHandlerDone
         putStrLn "Done ..."
         killThread threadId
     Nothing -> liftIO . putStrLn $ "Issue finding stateroots and hash of blocks"
@@ -105,7 +113,7 @@ stateRootAndHashFromBlockNumber db bn = do
 
 backupBlocksTransactionsMiscData :: (DB.MonadResource m, MonadCatch m)
                                  => DB.DB
-                                 -> MVar DB.WriteBatch
+                                 -> MVar (DB.WriteBatch,Int)
                                  -> B.ByteString
                                  -> m ()
 backupBlocksTransactionsMiscData inDB writeBucket bh = do
@@ -159,7 +167,7 @@ backupBlocksTransactionsMiscData inDB writeBucket bh = do
             _ -> return ()
 
 copyMPTFromStateRoot :: DB.DB
-                     -> MVar DB.WriteBatch
+                     -> MVar (DB.WriteBatch,Int)
                      -> StateRoot
                      -> IO ()
 copyMPTFromStateRoot inDB writeBucket = recCopyMPT
@@ -207,9 +215,11 @@ copyMPTFromStateRoot inDB writeBucket = recCopyMPT
 leftPad :: Int -> a -> [a] -> [a]
 leftPad n x xs = replicate (max 0 (n - length xs)) x ++ xs
 
-pushWriteBucket :: MVar DB.WriteBatch -> B.ByteString -> B.ByteString -> IO ()
+pushWriteBucket :: MVar (DB.WriteBatch,Int) -> B.ByteString -> B.ByteString -> IO ()
 pushWriteBucket mvWriteBucket k v = do
-  writeBucket <- takeMVar mvWriteBucket
+  (writeBucket,bucketSize) <- takeMVar mvWriteBucket
   let kvOp = DB.Put k v
-  putMVar mvWriteBucket (kvOp:writeBucket)
+      c = bucketSize+1
+      newBucket = c `seq` (kvOp:writeBucket,c)
+  putMVar mvWriteBucket newBucket
 

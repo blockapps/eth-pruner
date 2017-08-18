@@ -11,33 +11,36 @@ import qualified Database.LevelDB    as DB
 
 import           Database
 
-insertLoop :: DB.DB -> MVar DB.WriteBatch -> IO ()
-insertLoop db mvWriteBucket = do
-  _ <- iterateUntilM snd loop (1,False)
+insertLoop :: MVar Bool -> MVar Bool -> DB.DB -> MVar (DB.WriteBatch,Int) -> IO ()
+insertLoop done mvParentDone db mvWriteBucket = do
+  _ <- takeMVar done
+  _ <- iterateUntilM snd loop (1024,False)
   return ()
 
   where
     loop (timeout,_) =  do
-      writeBucket <- readMVar mvWriteBucket
-      let bucketSize = length writeBucket
-      if bucketSize >= 50000
+      (_, bucketSize) <- readMVar mvWriteBucket
+      parentDone <- readMVar mvParentDone
+
+      if bucketSize >= 100000
         then do
           void writeAndSwap
-          return (timeout,False)
+          return (timeout `div` 2,False)
         else
-          if timeout > 1000000
+          if timeout > 40000000 || parentDone
             then do
               void writeAndSwap
+              _ <- putMVar done True
               return (timeout,True)
             else do
               threadDelay timeout
-              writeBucket' <- readMVar mvWriteBucket
-              if length writeBucket' == bucketSize
-                then return (timeout*10, False)
-                else return (timeout `div` 10 ,False)
+              (_, bucketSize') <- readMVar mvWriteBucket
+              if bucketSize' == bucketSize || bucketSize < 100000
+                then return (timeout*2, False)
+                else return (timeout, False)
 
     writeAndSwap = do
-      writeBucket <- swapMVar mvWriteBucket []
+      (writeBucket,bucketSize) <- swapMVar mvWriteBucket ([],0)
       batchWriteToLvlDB db writeBucket
-      putStrLn ("wrote to DB: " <> show (length writeBucket))
+      putStrLn ("wrote to DB: " <> show bucketSize)
 
