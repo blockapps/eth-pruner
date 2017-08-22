@@ -27,6 +27,7 @@ library
                          Database
                        , Prune
                        , Prune.Types
+                       , Prune.InsertHandler
                        , Restore
     build-depends: 
                          base 
