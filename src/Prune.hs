@@ -139,6 +139,7 @@ backupBlocksTransactionsMiscData inDB writeBucket bh = do
             -- blockBody: bodyPrefix(1) + num (uint64 big endian)(8) + hash(32)
             -- blockReciept: blockRecieptPrefix(1) + num (uint64 big endian)(8) + hash(32)
             41 -> pushWriteBucket writeBucket key val
+            35 -> pushWriteBucket writeBucket key val
 
             33 -> case BC.length val of
               -- blockNumber: blockHashPrefix(1) + hash(32) -> blockNumber(8)
