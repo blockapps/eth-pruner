@@ -4,14 +4,13 @@
 import           Control.Monad.Trans.Resource (runResourceT)
 import           Options.Applicative
 import           System.Directory             (doesDirectoryExist)
-
 import           Prune
 
 
 main :: IO ()
 main = execParser opts >>= (\cli ->
-  let inDBDir = "./chaindata"
-      outDBDir = "./pruned_chaindata"
+  let inDBDir = inputDir cli
+      outDBDir = outputDir cli
   in do
     exists <- doesDirectoryExist inDBDir
 
@@ -28,11 +27,13 @@ main = execParser opts >>= (\cli ->
 
 
 
-newtype BlockNum = BlockNum { blockNumber :: Int }
+data BlockNum = BlockNum { blockNumber :: Int
+                         , inputDir :: FilePath
+                         , outputDir :: FilePath
+                         }
 
 cliVals :: Parser BlockNum
 cliVals = BlockNum
-       <$> argument auto
-                    (metavar "BLOCK"
-                   <> help "block number to prune from")
-
+       <$> argument auto (metavar "BlockNumber" <> help "block number to prune from")
+       <*> strArgument (metavar "InputDirectory" <>  help "location of the database to prune")
+       <*> strArgument (metavar "OutputDirectory" <> help "location to dump the pruned database")
