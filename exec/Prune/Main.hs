@@ -27,13 +27,14 @@ main = execParser opts >>= (\cli ->
 
 
 
-data BlockNum = BlockNum { blockNumber :: Int
-                         , inputDir :: FilePath
-                         , outputDir :: FilePath
-                         }
+data PrunerArgs = 
+  PrunerArgs { blockNumber :: Int
+             , inputDir :: FilePath
+             , outputDir :: FilePath
+             }
 
-cliVals :: Parser BlockNum
-cliVals = BlockNum
+cliVals :: Parser PrunerArgs
+cliVals = PrunerArgs
        <$> argument auto (metavar "BlockNumber" <> help "block number to prune from")
        <*> strArgument (metavar "InputDirectory" <>  help "location of the database to prune")
        <*> strArgument (metavar "OutputDirectory" <> help "location to dump the pruned database")
