@@ -23,18 +23,21 @@ library
       -fwarn-unused-matches
       -fwarn-unused-binds
       -fwarn-unused-imports
-    exposed-modules:   
+    exposed-modules:
                          Database
                        , Prune
+                       , Prune.ExtendedWord
                        , Prune.Types
                        , Prune.InsertHandler
                        , Restore
+                     
     build-depends: 
                          base 
                        , ansi-wl-pprint
                        , array
                        , base16-bytestring
                        , binary
+                       , blockapps-haskoin
                        , bytestring
                        , cmdargs
                        , containers
@@ -51,7 +54,6 @@ library
                        , network
                        , process
                        , resourcet
-                       , strato-model
                        , text
                        , time
                        , transformers
@@ -83,7 +85,6 @@ executable prune
                        , process
                        , prune
                        , resourcet
-                       , strato-model
                        , text
                        , time
                        , transformers
@@ -118,7 +119,6 @@ executable restore
                        , process
                        , prune
                        , resourcet
-                       , strato-model
                        , text
                        , time
                        , transformers
