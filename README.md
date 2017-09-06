@@ -13,7 +13,7 @@ Building eth-pruner requires [stack](https://docs.haskellstack.org/en/stable/REA
 
 Once the dependencies are installed, run
 
-    stack install --ghc-options="-thread -rtsopts"
+    stack install --ghc-options="-threaded -rtsopts"
     
 The `--ghc-options="-thread -rtsopts"` allows for using multiple cores if available on the machine.    
 
