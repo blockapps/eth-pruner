@@ -9,7 +9,6 @@ module Prune.Types where
 
 import           Data.Binary
 import qualified Data.ByteString                              as B
-import qualified Data.ByteString.Lazy                         as BL
 import           Data.Time
 import           Data.Time.Clock.POSIX
 import           GHC.Generics
@@ -24,8 +23,8 @@ type SHA = B.ByteString
 newtype Address = Address Word160 deriving (Show, Eq, Read, Enum, Real, Bounded, Num, Ord, Generic, Integral)
 
 instance RLPSerializable Address where
-  rlpEncode (Address a) = RLPString $ BL.toStrict $ encode a
-  rlpDecode (RLPString s) = Address $ decode $ BL.fromStrict s
+  rlpEncode (Address a) = RLPString $ B.pack $ word160ToBytes a
+  rlpDecode (RLPString s) = Address $ bytesToWord160 $ B.unpack s
   rlpDecode x             = error ("Malformed rlp object sent to rlp2Address: " ++ show x)
 
 data BlockHeader =

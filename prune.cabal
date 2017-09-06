@@ -37,7 +37,6 @@ library
                        , array
                        , base16-bytestring
                        , binary
-                       , blockapps-haskoin
                        , bytestring
                        , cmdargs
                        , containers
@@ -46,6 +45,7 @@ library
                        , ethereum-rlp
                        , exceptions
                        , filepath
+                       , data-dword
                        , leveldb-haskell
                        , merkle-patricia-db
                        , monad-logger

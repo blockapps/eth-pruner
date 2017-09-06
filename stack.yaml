@@ -6,6 +6,8 @@ packages:
     commit: 061a2afebae6dc2024e3fd883b250453f4111c7d
   extra-dep: true
 extra-deps:
+- data-dword-0.3.1.1
+- data-bword-0.1.0.1
 - ethereum-rlp-0.1.0
 - merkle-patricia-db-0.1.0
 - Crypto-4.2.5.1
