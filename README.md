@@ -32,7 +32,7 @@ The eth-pruner project comes with two executables.
 Run `prune` in the directory containing the levelDB data, typically the levelDB data is stored in a folder called `chaindata`. `prune` takes 1 argument, the selected block number containing the stateroot that should be preserved. Make certain that the geth node is stopped. 
 
 ```
-prune <block-number> +RTS -N2
+prune <BlockNumber> <InputDirectory> <OutputDirectory> +RTS -N2
 ```
 
 The `+RTS -N2` options tell the pruner tool to make use of 2 cores. It will still work fine if the machine has only 1 core.
